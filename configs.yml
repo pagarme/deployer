@@ -1,0 +1,32 @@
+region: 'us-east-1'
+repositories:
+  thunderbolt:
+    git_url: 'git@github.com:pagarme/thunderbolt.git'
+    branch: 'master'
+  api-router:
+    git_url: 'git@github.com:pagarme/api-router.git'
+    branch: 'master'
+projects:
+  api-router:
+    repo: api-router
+    multiproject: no
+    environments:
+      main:
+        beanstalk-app: 'api-router'
+        beanstalk-env: 'api-router'
+        s3_bucket: 'elasticbeanstalk-us-east-1-543536470053'
+        s3_directory: 'api-router'
+  thunderbolt:
+    repo: thunderbolt
+    multiproject: no
+    environments:
+      sandbox:
+        beanstalk-app: 'sandbox-thunderbolt'
+        beanstalk-env: 'sandbox-thunderbolt'
+        s3_bucket: 'elasticbeanstalk-us-east-1-543536470053'
+        s3_directory: 'thunderbolt'
+      live:
+        beanstalk-app: 'live-thunderbolt'
+        beanstalk-env: 'live-thunderbolt'
+        s3_bucket: 'elasticbeanstalk-us-east-1-543536470053'
+        s3_directory: 'thunderbolt'

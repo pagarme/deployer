@@ -1,0 +1,5 @@
+---
+- hosts: localhost
+  roles:
+  - ../ansible/roles/docker
+  - ../ansible/roles/rocker

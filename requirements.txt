@@ -1,0 +1,6 @@
+click
+gitpython
+pyyaml
+ipdb
+jinja2
+boto3
