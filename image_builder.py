@@ -51,9 +51,9 @@ def build_image(work_dir, project, configs, user_options):
     push_param = '--push' if user_options.push else ''
 
     build_vars = {}
-    build_vars['ENVIRONMENT'] = user_options.environment
-    build_vars['REPOSITORY_PATH'] = repository_path
-    build_vars['IMAGE_SHA'] = configs['projects'][user_options.project]['sha']
+    build_vars['Environment'] = user_options.environment
+    build_vars['RepositoryPath'] = repository_path
+    build_vars['ImageSHA'] = configs['projects'][user_options.project]['sha']
 
     vars_param = ''
     for key, value in build_vars.items():
