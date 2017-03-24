@@ -3,6 +3,9 @@ repositories:
   thunderbolt:
     git_url: 'git@github.com:pagarme/thunderbolt.git'
     branch: 'master'
+  autobahn:
+    git_url: 'git@github.com:pagarme/autobahn.git'
+    branch: 'master'
   api-router:
     git_url: 'git@github.com:pagarme/api-router.git'
     branch: 'master'
@@ -30,3 +33,17 @@ projects:
         beanstalk-env: 'live-thunderbolt'
         s3_bucket: 'elasticbeanstalk-us-east-1-543536470053'
         s3_directory: 'thunderbolt'
+  autobahn:
+    repo: autobahn
+    multiproject: no
+    environments:
+      sandbox:
+        beanstalk-app: 'sandbox-autobahn'
+        beanstalk-env: 'sandbox-autobahn'
+        s3_bucket: 'elasticbeanstalk-us-east-1-543536470053'
+        s3_directory: 'autobahn'
+      live:
+        beanstalk-app: 'live-autobahn'
+        beanstalk-env: 'live-autobahn'
+        s3_bucket: 'elasticbeanstalk-us-east-1-543536470053'
+        s3_directory: 'autobahn'
