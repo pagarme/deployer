@@ -59,10 +59,9 @@ func (s *upSession) AdvertisedReferences() (*packp.AdvRefs, error) {
 		return nil, err
 	}
 
-	defer res.Body.Close()
-
-	if res.StatusCode == http.StatusUnauthorized {
-		return nil, transport.ErrAuthorizationRequired
+	if err := NewErr(res); err != nil {
+		_ = res.Body.Close()
+		return nil, err
 	}
 
 	ar := packp.NewAdvRefs()
@@ -151,7 +150,7 @@ func (s *upSession) doRequest(method, url string, content *bytes.Buffer) (*http.
 // it requires a bytes.Buffer, because we need to know the length
 func (s *upSession) applyHeadersToRequest(req *http.Request, content *bytes.Buffer) {
 	req.Header.Add("User-Agent", "git/1.0")
-	req.Header.Add("Host", s.endpoint.Host)
+	req.Header.Add("Host", s.endpoint.Host()) // host:port
 
 	if content == nil {
 		req.Header.Add("Accept", "*/*")

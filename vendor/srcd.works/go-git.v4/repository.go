@@ -3,8 +3,10 @@ package git
 import (
 	"errors"
 	"fmt"
+	stdioutil "io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/src-d/go-git.v4/internal/revision"
@@ -13,6 +15,7 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 	"gopkg.in/src-d/go-git.v4/storage"
 	"gopkg.in/src-d/go-git.v4/storage/filesystem"
+	"gopkg.in/src-d/go-git.v4/utils/ioutil"
 
 	"gopkg.in/src-d/go-billy.v2"
 	"gopkg.in/src-d/go-billy.v2/osfs"
@@ -193,18 +196,17 @@ func PlainInit(path string, isBare bool) (*Repository, error) {
 // repository is bare or a normal one. If the path doesn't contain a valid
 // repository ErrRepositoryNotExists is returned
 func PlainOpen(path string) (*Repository, error) {
-	var wt, dot billy.Filesystem
+	dot, wt, err := dotGitToFilesystems(path)
+	if err != nil {
+		return nil, err
+	}
 
-	fs := osfs.New(path)
-	if _, err := fs.Stat(".git"); err != nil {
-		if !os.IsNotExist(err) {
-			return nil, err
+	if _, err := dot.Stat(""); err != nil {
+		if os.IsNotExist(err) {
+			return nil, ErrRepositoryNotExists
 		}
 
-		dot = fs
-	} else {
-		wt = fs
-		dot = fs.Dir(".git")
+		return nil, err
 	}
 
 	s, err := filesystem.NewStorage(dot)
@@ -213,6 +215,58 @@ func PlainOpen(path string) (*Repository, error) {
 	}
 
 	return Open(s, wt)
+}
+
+func dotGitToFilesystems(path string) (dot, wt billy.Filesystem, err error) {
+	fs := osfs.New(path)
+	fi, err := fs.Stat(".git")
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return nil, nil, err
+		}
+
+		return fs, nil, nil
+	}
+
+	if fi.IsDir() {
+		return fs.Dir(".git"), fs, nil
+	}
+
+	dot, err = dotGitFileToFilesystem(fs)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return dot, fs, nil
+}
+
+func dotGitFileToFilesystem(fs billy.Filesystem) (billy.Filesystem, error) {
+	var err error
+
+	f, err := fs.Open(".git")
+	if err != nil {
+		return nil, err
+	}
+	defer ioutil.CheckClose(f, &err)
+
+	b, err := stdioutil.ReadAll(f)
+	if err != nil {
+		return nil, err
+	}
+
+	line := string(b)
+	const prefix = "gitdir: "
+	if !strings.HasPrefix(line, prefix) {
+		return nil, fmt.Errorf(".git file has no %s prefix", prefix)
+	}
+
+	gitdir := line[len(prefix):]
+	gitdir = strings.TrimSpace(gitdir)
+	if filepath.IsAbs(gitdir) {
+		return osfs.New(gitdir), nil
+	}
+
+	return fs.Dir(gitdir), err
 }
 
 // PlainClone a repository into the path with the given options, isBare defines
@@ -340,11 +394,11 @@ func (r *Repository) clone(o *CloneOptions) error {
 		return err
 	}
 
-	if _, err := r.updateReferences(c.Fetch, o.ReferenceName, head); err != nil {
+	if _, err := r.updateReferences(c.Fetch, head); err != nil {
 		return err
 	}
 
-	if err := r.updateWorktree(); err != nil {
+	if err := r.updateWorktree(head.Name()); err != nil {
 		return err
 	}
 
@@ -429,7 +483,7 @@ func (r *Repository) updateRemoteConfig(remote *Remote, o *CloneOptions,
 }
 
 func (r *Repository) updateReferences(spec []config.RefSpec,
-	headName plumbing.ReferenceName, resolvedHead *plumbing.Reference) (updated bool, err error) {
+	resolvedHead *plumbing.Reference) (updated bool, err error) {
 
 	if !resolvedHead.IsBranch() {
 		// Detached HEAD mode
@@ -534,7 +588,7 @@ func (r *Repository) Pull(o *PullOptions) error {
 		return err
 	}
 
-	refsUpdated, err := r.updateReferences(remote.c.Fetch, o.ReferenceName, head)
+	refsUpdated, err := r.updateReferences(remote.c.Fetch, head)
 	if err != nil {
 		return err
 	}
@@ -547,7 +601,7 @@ func (r *Repository) Pull(o *PullOptions) error {
 		return NoErrAlreadyUpToDate
 	}
 
-	if err := r.updateWorktree(); err != nil {
+	if err := r.updateWorktree(head.Name()); err != nil {
 		return err
 	}
 
@@ -560,9 +614,14 @@ func (r *Repository) Pull(o *PullOptions) error {
 	return nil
 }
 
-func (r *Repository) updateWorktree() error {
+func (r *Repository) updateWorktree(branch plumbing.ReferenceName) error {
 	if r.wt == nil {
 		return nil
+	}
+
+	b, err := r.Reference(branch, true)
+	if err != nil {
+		return err
 	}
 
 	w, err := r.Worktree()
@@ -570,12 +629,9 @@ func (r *Repository) updateWorktree() error {
 		return err
 	}
 
-	h, err := r.Head()
-	if err != nil {
-		return err
-	}
-
-	return w.Checkout(h.Hash())
+	return w.Reset(&ResetOptions{
+		Commit: b.Hash(),
+	})
 }
 
 // Fetch fetches changes from a remote repository.
@@ -606,6 +662,26 @@ func (r *Repository) Push(o *PushOptions) error {
 	}
 
 	return remote.Push(o)
+}
+
+// Log returns the commit history from the given LogOptions.
+func (r *Repository) Log(o *LogOptions) (object.CommitIter, error) {
+	h := o.From
+	if o.From == plumbing.ZeroHash {
+		head, err := r.Head()
+		if err != nil {
+			return nil, err
+		}
+
+		h = head.Hash()
+	}
+
+	commit, err := r.CommitObject(h)
+	if err != nil {
+		return nil, err
+	}
+
+	return object.NewCommitPreIterator(commit), nil
 }
 
 // Tags returns all the References from Tags. This method returns all the tag
@@ -671,7 +747,7 @@ func (r *Repository) CommitObject(h plumbing.Hash) (*object.Commit, error) {
 }
 
 // CommitObjects returns an unsorted CommitIter with all the commits in the repository.
-func (r *Repository) CommitObjects() (*object.CommitIter, error) {
+func (r *Repository) CommitObjects() (object.CommitIter, error) {
 	iter, err := r.Storer.IterEncodedObjects(plumbing.CommitObject)
 	if err != nil {
 		return nil, err
@@ -838,29 +914,28 @@ func (r *Repository) ResolveRevision(rev plumbing.Revision) (*plumbing.Hash, err
 				commit = c
 			}
 		case revision.CaretReg:
-			history, err := commit.History()
-
-			if err != nil {
-				return &plumbing.ZeroHash, err
-			}
+			history := object.NewCommitPreIterator(commit)
 
 			re := item.(revision.CaretReg).Regexp
 			negate := item.(revision.CaretReg).Negate
 
 			var c *object.Commit
 
-			for i := 0; i < len(history); i++ {
-				if !negate && re.MatchString(history[i].Message) {
-					c = history[i]
-
-					break
+			err := history.ForEach(func(hc *object.Commit) error {
+				if !negate && re.MatchString(hc.Message) {
+					c = hc
+					return storer.ErrStop
 				}
 
-				if negate && !re.MatchString(history[i].Message) {
-					c = history[i]
-
-					break
+				if negate && !re.MatchString(hc.Message) {
+					c = hc
+					return storer.ErrStop
 				}
+
+				return nil
+			})
+			if err != nil {
+				return &plumbing.ZeroHash, err
 			}
 
 			if c == nil {
@@ -869,21 +944,21 @@ func (r *Repository) ResolveRevision(rev plumbing.Revision) (*plumbing.Hash, err
 
 			commit = c
 		case revision.AtDate:
-			history, err := commit.History()
-
-			if err != nil {
-				return &plumbing.ZeroHash, err
-			}
+			history := object.NewCommitPreIterator(commit)
 
 			date := item.(revision.AtDate).Date
+
 			var c *object.Commit
-
-			for i := 0; i < len(history); i++ {
-				if date.Equal(history[i].Committer.When.UTC()) || history[i].Committer.When.UTC().Before(date) {
-					c = history[i]
-
-					break
+			err := history.ForEach(func(hc *object.Commit) error {
+				if date.Equal(hc.Committer.When.UTC()) || hc.Committer.When.UTC().Before(date) {
+					c = hc
+					return storer.ErrStop
 				}
+
+				return nil
+			})
+			if err != nil {
+				return &plumbing.ZeroHash, err
 			}
 
 			if c == nil {

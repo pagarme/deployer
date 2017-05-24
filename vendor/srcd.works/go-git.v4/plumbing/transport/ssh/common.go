@@ -3,7 +3,6 @@ package ssh
 
 import (
 	"fmt"
-	"strings"
 
 	"gopkg.in/src-d/go-git.v4/plumbing/transport"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport/internal/common"
@@ -13,6 +12,14 @@ import (
 
 // DefaultClient is the default SSH client.
 var DefaultClient = common.NewClient(&runner{})
+
+// DefaultAuthBuilder is the function used to create a default AuthMethod, when
+// the user doesn't provide any.
+var DefaultAuthBuilder = func(user string) (AuthMethod, error) {
+	return NewSSHAgentAuth(user)
+}
+
+const DefaultPort = 22
 
 type runner struct{}
 
@@ -82,7 +89,13 @@ func (c *command) connect() error {
 	}
 
 	var err error
-	c.client, err = ssh.Dial("tcp", c.getHostWithPort(), c.auth.clientConfig())
+	config := c.auth.clientConfig()
+	config.HostKeyCallback, err = c.auth.hostKeyCallback()
+	if err != nil {
+		return err
+	}
+
+	c.client, err = ssh.Dial("tcp", c.getHostWithPort(), config)
 	if err != nil {
 		return err
 	}
@@ -98,25 +111,21 @@ func (c *command) connect() error {
 }
 
 func (c *command) getHostWithPort() string {
-	host := c.endpoint.Host
-	if strings.Index(c.endpoint.Host, ":") == -1 {
-		host += ":22"
+	host := c.endpoint.Host()
+	port := c.endpoint.Port()
+	if port <= 0 {
+		port = DefaultPort
 	}
 
-	return host
+	return fmt.Sprintf("%s:%d", host, port)
 }
 
 func (c *command) setAuthFromEndpoint() error {
-	var u string
-	if info := c.endpoint.User; info != nil {
-		u = info.Username()
-	}
-
 	var err error
-	c.auth, err = NewSSHAgentAuth(u)
+	c.auth, err = DefaultAuthBuilder(c.endpoint.User())
 	return err
 }
 
 func endpointToCommand(cmd string, ep transport.Endpoint) string {
-	return fmt.Sprintf("%s '%s'", cmd, ep.Path)
+	return fmt.Sprintf("%s '%s'", cmd, ep.Path())
 }
