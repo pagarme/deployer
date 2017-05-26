@@ -6,6 +6,8 @@ import (
 
 	"github.com/mitchellh/cli"
 
+	_ "github.com/pagarme/deployer/build/rocker"
+	_ "github.com/pagarme/deployer/deploy/nomad"
 	_ "github.com/pagarme/deployer/scm/git"
 )
 

@@ -1,11 +1,15 @@
 package scm
 
-import "errors"
+import (
+	"errors"
+
+	"github.com/pagarme/deployer/pipeline"
+)
 
 type Factory func(config map[string]interface{}) (Scm, error)
 
 type Scm interface {
-	Fetch(workdir, ref string) error
+	Fetch(ctx pipeline.Context, workdir, ref string) error
 }
 
 var factories = map[string]Factory{}

@@ -1,10 +1,15 @@
-package deployer
+package deploy
 
-import "errors"
+import (
+	"errors"
+
+	"github.com/pagarme/deployer/pipeline"
+)
 
 type Factory func(config map[string]interface{}) (Deployer, error)
 
 type Deployer interface {
+	Deploy(ctx pipeline.Context) error
 }
 
 var factories = map[string]Factory{}

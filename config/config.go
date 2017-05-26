@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 )
@@ -35,11 +36,17 @@ func (c *Config) GetEnvironment(env string) map[string]interface{} {
 		return map[string]interface{}{}
 	}
 
-	m, ok := e.(map[string]interface{})
+	m, ok := e.(map[interface{}]interface{})
 
 	if !ok {
 		return map[string]interface{}{}
 	}
 
-	return m
+	real := map[string]interface{}{}
+
+	for k, v := range m {
+		real[fmt.Sprintf("%v", k)] = v
+	}
+
+	return real
 }

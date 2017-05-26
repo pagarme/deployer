@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/pagarme/deployer/build"
 	"github.com/pagarme/deployer/config"
+	"github.com/pagarme/deployer/deploy"
 	"github.com/pagarme/deployer/pipeline"
+	"github.com/pagarme/deployer/scm"
 )
 
 type DeployCommand struct {
@@ -55,13 +58,14 @@ func (c *DeployCommand) Run(args []string) int {
 	pipe.Context["Config"] = cfg
 	pipe.Context["Environment"] = cfg.GetEnvironment(env)
 
-	pipe.Add(&pipeline.ScmStep{
+	pipe.Add(&scm.ScmStep{
 		Config: cfg.Scm,
 		Ref:    ref,
 	})
 
-	// pipe.Add(&pipeline.BuildStep{Config: cfg.Build})
-	// pipe.Add(&pipeline.DeployStep{Config: cfg.Deploy})
+	pipe.Add(&build.BuildStep{Config: cfg.Build})
+
+	pipe.Add(&deploy.DeployStep{Config: cfg.Deploy})
 
 	if err := pipe.Execute(); err != nil {
 		fmt.Printf("An error ocurred during the deployment: %s\n", err)
