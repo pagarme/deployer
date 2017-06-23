@@ -1,7 +1,6 @@
 package git
 
 import (
-	"io"
 	"path/filepath"
 	"strings"
 
@@ -10,9 +9,8 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing/format/index"
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 	"gopkg.in/src-d/go-git.v4/storage"
-	"gopkg.in/src-d/go-git.v4/utils/ioutil"
 
-	"gopkg.in/src-d/go-billy.v2"
+	"gopkg.in/src-d/go-billy.v3"
 )
 
 // Commit stores the current contents of the index in a new commit along with
@@ -33,12 +31,12 @@ func (w *Worktree) Commit(msg string, opts *CommitOptions) (plumbing.Hash, error
 		return plumbing.ZeroHash, err
 	}
 
-	h := &commitIndexHelper{
+	h := &buildTreeHelper{
 		fs: w.fs,
 		s:  w.r.Storer,
 	}
 
-	tree, err := h.buildTreeAndBlobObjects(idx)
+	tree, err := h.BuildTree(idx)
 	if err != nil {
 		return plumbing.ZeroHash, err
 	}
@@ -102,10 +100,10 @@ func (w *Worktree) buildCommitObject(msg string, opts *CommitOptions, tree plumb
 	return w.r.Storer.SetEncodedObject(obj)
 }
 
-// commitIndexHelper converts a given index.Index file into multiple git objects
+// buildTreeHelper converts a given index.Index file into multiple git objects
 // reading the blobs from the given filesystem and creating the trees from the
 // index structure. The created objects are pushed to a given Storer.
-type commitIndexHelper struct {
+type buildTreeHelper struct {
 	fs billy.Filesystem
 	s  storage.Storer
 
@@ -113,9 +111,9 @@ type commitIndexHelper struct {
 	entries map[string]*object.TreeEntry
 }
 
-// buildTreesAndBlobs builds the objects and push its to the storer, the hash
+// BuildTree builds the tree objects and push its to the storer, the hash
 // of the root tree is returned.
-func (h *commitIndexHelper) buildTreeAndBlobObjects(idx *index.Index) (plumbing.Hash, error) {
+func (h *buildTreeHelper) BuildTree(idx *index.Index) (plumbing.Hash, error) {
 	const rootNode = ""
 	h.trees = map[string]*object.Tree{rootNode: {}}
 	h.entries = map[string]*object.TreeEntry{}
@@ -129,7 +127,7 @@ func (h *commitIndexHelper) buildTreeAndBlobObjects(idx *index.Index) (plumbing.
 	return h.copyTreeToStorageRecursive(rootNode, h.trees[rootNode])
 }
 
-func (h *commitIndexHelper) commitIndexEntry(e *index.Entry) error {
+func (h *buildTreeHelper) commitIndexEntry(e *index.Entry) error {
 	parts := strings.Split(e.Name, string(filepath.Separator))
 
 	var path string
@@ -137,25 +135,19 @@ func (h *commitIndexHelper) commitIndexEntry(e *index.Entry) error {
 		parent := path
 		path = filepath.Join(path, part)
 
-		if !h.buildTree(e, parent, path) {
-			continue
-		}
-
-		if err := h.copyIndexEntryToStorage(e); err != nil {
-			return err
-		}
+		h.doBuildTree(e, parent, path)
 	}
 
 	return nil
 }
 
-func (h *commitIndexHelper) buildTree(e *index.Entry, parent, path string) bool {
+func (h *buildTreeHelper) doBuildTree(e *index.Entry, parent, path string) {
 	if _, ok := h.trees[path]; ok {
-		return false
+		return
 	}
 
 	if _, ok := h.entries[path]; ok {
-		return false
+		return
 	}
 
 	te := object.TreeEntry{Name: filepath.Base(path)}
@@ -169,55 +161,9 @@ func (h *commitIndexHelper) buildTree(e *index.Entry, parent, path string) bool 
 	}
 
 	h.trees[parent].Entries = append(h.trees[parent].Entries, te)
-	return true
 }
 
-func (h *commitIndexHelper) copyIndexEntryToStorage(e *index.Entry) error {
-	_, err := h.s.EncodedObject(plumbing.BlobObject, e.Hash)
-	if err == nil {
-		return nil
-	}
-
-	if err != plumbing.ErrObjectNotFound {
-		return err
-	}
-
-	return h.doCopyIndexEntryToStorage(e)
-}
-
-func (h *commitIndexHelper) doCopyIndexEntryToStorage(e *index.Entry) (err error) {
-	fi, err := h.fs.Stat(e.Name)
-	if err != nil {
-		return err
-	}
-
-	obj := h.s.NewEncodedObject()
-	obj.SetType(plumbing.BlobObject)
-	obj.SetSize(fi.Size())
-
-	reader, err := h.fs.Open(e.Name)
-	if err != nil {
-		return err
-	}
-
-	defer ioutil.CheckClose(reader, &err)
-
-	writer, err := obj.Writer()
-	if err != nil {
-		return err
-	}
-
-	defer ioutil.CheckClose(writer, &err)
-
-	if _, err := io.Copy(writer, reader); err != nil {
-		return err
-	}
-
-	_, err = h.s.SetEncodedObject(obj)
-	return err
-}
-
-func (h *commitIndexHelper) copyTreeToStorageRecursive(parent string, t *object.Tree) (plumbing.Hash, error) {
+func (h *buildTreeHelper) copyTreeToStorageRecursive(parent string, t *object.Tree) (plumbing.Hash, error) {
 	for i, e := range t.Entries {
 		if e.Mode != filemode.Dir && !e.Hash.IsZero() {
 			continue

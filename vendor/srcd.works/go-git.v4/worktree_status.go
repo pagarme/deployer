@@ -8,6 +8,7 @@ import (
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/filemode"
+	"gopkg.in/src-d/go-git.v4/plumbing/format/gitignore"
 	"gopkg.in/src-d/go-git.v4/plumbing/format/index"
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 	"gopkg.in/src-d/go-git.v4/utils/ioutil"
@@ -114,7 +115,40 @@ func (w *Worktree) diffStagingWithWorktree() (merkletrie.Changes, error) {
 	}
 
 	to := filesystem.NewRootNode(w.fs, submodules)
-	return merkletrie.DiffTree(from, to, diffTreeIsEquals)
+	res, err := merkletrie.DiffTree(from, to, diffTreeIsEquals)
+	if err == nil {
+		res = w.excludeIgnoredChanges(res)
+	}
+	return res, err
+}
+
+func (w *Worktree) excludeIgnoredChanges(changes merkletrie.Changes) merkletrie.Changes {
+	patterns, err := gitignore.ReadPatterns(w.fs, nil)
+	if err != nil || len(patterns) == 0 {
+		return changes
+	}
+	m := gitignore.NewMatcher(patterns)
+
+	var res merkletrie.Changes
+	for _, ch := range changes {
+		var path []string
+		for _, n := range ch.To {
+			path = append(path, n.Name())
+		}
+		if len(path) == 0 {
+			for _, n := range ch.From {
+				path = append(path, n.Name())
+			}
+		}
+		if len(path) != 0 {
+			isDir := (len(ch.To) > 0 && ch.To.IsDir()) || (len(ch.From) > 0 && ch.From.IsDir())
+			if m.Match(path, isDir) {
+				continue
+			}
+		}
+		res = append(res, ch)
+	}
+	return res
 }
 
 func (w *Worktree) getSubmodulesStatus() (map[string]plumbing.Hash, error) {
@@ -195,7 +229,7 @@ func (w *Worktree) Add(path string) (plumbing.Hash, error) {
 		return plumbing.ZeroHash, err
 	}
 
-	h, err := w.calculateBlobHash(path)
+	h, err := w.copyFileToStorage(path)
 	if err != nil {
 		return h, err
 	}
@@ -211,26 +245,59 @@ func (w *Worktree) Add(path string) (plumbing.Hash, error) {
 	return h, err
 }
 
-func (w *Worktree) calculateBlobHash(filename string) (hash plumbing.Hash, err error) {
-	fi, err := w.fs.Stat(filename)
+func (w *Worktree) copyFileToStorage(path string) (hash plumbing.Hash, err error) {
+	fi, err := w.fs.Lstat(path)
 	if err != nil {
 		return plumbing.ZeroHash, err
 	}
 
-	f, err := w.fs.Open(filename)
+	obj := w.r.Storer.NewEncodedObject()
+	obj.SetType(plumbing.BlobObject)
+	obj.SetSize(fi.Size())
+
+	writer, err := obj.Writer()
 	if err != nil {
 		return plumbing.ZeroHash, err
 	}
 
-	defer ioutil.CheckClose(f, &err)
+	defer ioutil.CheckClose(writer, &err)
 
-	h := plumbing.NewHasher(plumbing.BlobObject, fi.Size())
-	if _, err := io.Copy(h, f); err != nil {
+	if fi.Mode()&os.ModeSymlink != 0 {
+		err = w.fillEncodedObjectFromSymlink(writer, path, fi)
+	} else {
+		err = w.fillEncodedObjectFromFile(writer, path, fi)
+	}
+
+	if err != nil {
 		return plumbing.ZeroHash, err
 	}
 
-	hash = h.Sum()
-	return
+	return w.r.Storer.SetEncodedObject(obj)
+}
+
+func (w *Worktree) fillEncodedObjectFromFile(dst io.Writer, path string, fi os.FileInfo) (err error) {
+	src, err := w.fs.Open(path)
+	if err != nil {
+		return err
+	}
+
+	defer ioutil.CheckClose(src, &err)
+
+	if _, err := io.Copy(dst, src); err != nil {
+		return err
+	}
+
+	return err
+}
+
+func (w *Worktree) fillEncodedObjectFromSymlink(dst io.Writer, path string, fi os.FileInfo) error {
+	target, err := w.fs.Readlink(path)
+	if err != nil {
+		return err
+	}
+
+	_, err = dst.Write([]byte(target))
+	return err
 }
 
 func (w *Worktree) addOrUpdateFileToIndex(filename string, h plumbing.Hash) error {
@@ -265,7 +332,7 @@ func (w *Worktree) doAddFileToIndex(idx *index.Index, filename string, h plumbin
 }
 
 func (w *Worktree) doUpdateFileToIndex(e *index.Entry, filename string, h plumbing.Hash) error {
-	info, err := w.fs.Stat(filename)
+	info, err := w.fs.Lstat(filename)
 	if err != nil {
 		return err
 	}
@@ -273,10 +340,12 @@ func (w *Worktree) doUpdateFileToIndex(e *index.Entry, filename string, h plumbi
 	e.Hash = h
 	e.ModifiedAt = info.ModTime()
 	e.Mode, err = filemode.NewFromOSFileMode(info.Mode())
-	e.Size = uint32(info.Size())
-
 	if err != nil {
 		return err
+	}
+
+	if e.Mode.IsRegular() {
+		e.Size = uint32(info.Size())
 	}
 
 	fillSystemInfo(e, info.Sys())
@@ -319,11 +388,11 @@ func (w *Worktree) deleteFromFilesystem(path string) error {
 // Move moves or rename a file in the worktree and the index, directories are
 // not supported.
 func (w *Worktree) Move(from, to string) (plumbing.Hash, error) {
-	if _, err := w.fs.Stat(from); err != nil {
+	if _, err := w.fs.Lstat(from); err != nil {
 		return plumbing.ZeroHash, err
 	}
 
-	if _, err := w.fs.Stat(to); err == nil {
+	if _, err := w.fs.Lstat(to); err == nil {
 		return plumbing.ZeroHash, ErrDestinationExists
 	}
 

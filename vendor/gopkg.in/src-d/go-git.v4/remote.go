@@ -47,7 +47,7 @@ func (r *Remote) String() string {
 
 // Fetch fetches references from the remote to the local repository.
 // Returns nil if the operation is successful, NoErrAlreadyUpToDate if there are
-// no changes to be fetched, or an error.
+// no changes to be fetched and no local references to update, or an error.
 func (r *Remote) Fetch(o *FetchOptions) error {
 	_, err := r.fetch(o)
 	return err
@@ -75,6 +75,8 @@ func (r *Remote) Push(o *PushOptions) (err error) {
 	if err != nil {
 		return err
 	}
+
+	defer ioutil.CheckClose(s, &err)
 
 	ar, err := s.AdvertisedReferences()
 	if err != nil {
@@ -154,24 +156,26 @@ func (r *Remote) fetch(o *FetchOptions) (refs storer.ReferenceStorer, err error)
 	}
 
 	req.Wants, err = getWants(o.RefSpecs, r.s, remoteRefs)
+	if len(req.Wants) > 0 {
+		req.Haves, err = getHaves(r.s)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := r.fetchPack(o, s, req); err != nil {
+			return nil, err
+		}
+	}
+
+	err = r.updateLocalReferenceStorage(o.RefSpecs, remoteRefs)
+	if err != nil && err != NoErrAlreadyUpToDate {
+		return nil, err
+	}
+
 	if len(req.Wants) == 0 {
-		return remoteRefs, NoErrAlreadyUpToDate
+		return remoteRefs, err
 	}
-
-	req.Haves, err = getHaves(r.s)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := r.fetchPack(o, s, req); err != nil {
-		return nil, err
-	}
-
-	if err := r.updateLocalReferenceStorage(o.RefSpecs, remoteRefs); err != nil {
-		return nil, err
-	}
-
-	return remoteRefs, err
+	return remoteRefs, nil
 }
 
 func newUploadPackSession(url string, auth transport.AuthMethod) (transport.UploadPackSession, error) {
@@ -420,7 +424,7 @@ func isFastForward(s storer.EncodedObjectStorer, old, new plumbing.Hash) (bool, 
 	}
 
 	found := false
-	iter := object.NewCommitPreIterator(c)
+	iter := object.NewCommitPreorderIter(c)
 	return found, iter.ForEach(func(c *object.Commit) error {
 		if c.Hash != old {
 			return nil
@@ -471,6 +475,7 @@ func buildSidebandIfSupported(l *capability.List, reader io.Reader, p sideband.P
 }
 
 func (r *Remote) updateLocalReferenceStorage(specs []config.RefSpec, refs memory.ReferenceStorage) error {
+	updated := false
 	for _, spec := range specs {
 		for _, ref := range refs {
 			if !spec.Match(ref.Name()) {
@@ -482,38 +487,55 @@ func (r *Remote) updateLocalReferenceStorage(specs []config.RefSpec, refs memory
 			}
 
 			name := spec.Dst(ref.Name())
-			n := plumbing.NewHashReference(name, ref.Hash())
-			if err := r.s.SetReference(n); err != nil {
+			sref, err := r.s.Reference(name)
+			if err != nil && err != plumbing.ErrReferenceNotFound {
 				return err
+			}
+			if err == plumbing.ErrReferenceNotFound || sref.Hash() != ref.Hash() {
+				n := plumbing.NewHashReference(name, ref.Hash())
+				if err := r.s.SetReference(n); err != nil {
+					return err
+				}
+				updated = true
 			}
 		}
 	}
 
-	return r.buildFetchedTags(refs)
-}
-
-func (r *Remote) buildFetchedTags(refs storer.ReferenceStorer) error {
-	iter, err := refs.IterReferences()
-	if err != nil {
+	if err := r.buildFetchedTags(refs); err != nil {
 		return err
 	}
 
-	return iter.ForEach(func(ref *plumbing.Reference) error {
+	if !updated {
+		return NoErrAlreadyUpToDate
+	}
+	return nil
+}
+
+func (r *Remote) buildFetchedTags(refs memory.ReferenceStorage) error {
+	updated := false
+	for _, ref := range refs {
 		if !ref.IsTag() {
-			return nil
+			continue
 		}
 
 		_, err := r.s.EncodedObject(plumbing.AnyObject, ref.Hash())
 		if err == plumbing.ErrObjectNotFound {
-			return nil
+			continue
 		}
 
 		if err != nil {
 			return err
 		}
 
-		return r.s.SetReference(ref)
-	})
+		if err = r.s.SetReference(ref); err != nil {
+			return err
+		}
+		updated = true
+	}
+	if !updated {
+		return NoErrAlreadyUpToDate
+	}
+	return nil
 }
 
 func objectsToPush(commands []*packp.Command) ([]plumbing.Hash, error) {

@@ -87,10 +87,10 @@
 			"revisionTime": "2015-08-27T00:49:46Z"
 		},
 		{
-			"checksumSHA1": "d6798KSc0jDg2MHNxKdgyNfMK7A=",
+			"checksumSHA1": "M+ZeYktTT2wak9ZvQ0OZBbIHAGo=",
 			"path": "github.com/armon/go-metrics",
-			"revision": "3df31a1ada83e310c2e24b267c8e8b68836547b4",
-			"revisionTime": "2016-07-17T04:34:58Z"
+			"revision": "f036747b9d0e8590f175a5d654a2194a7d9df4b5",
+			"revisionTime": "2017-06-01T21:44:32Z"
 		},
 		{
 			"checksumSHA1": "OmqT9Y1mAHvlAKeJh0jBHC9SH78=",
@@ -450,10 +450,10 @@
 			"revisionTime": "2016-08-27T06:11:18Z"
 		},
 		{
-			"checksumSHA1": "wDZdTaY9JiqqqnF4c3pHP71nWmk=",
+			"checksumSHA1": "oyULO1B/l2OLy2xereo+2w3hYk4=",
 			"path": "github.com/go-ole/go-ole",
-			"revision": "5e9c030faf78847db7aa77e3661b9cc449de29b7",
-			"revisionTime": "2016-11-16T06:46:58Z"
+			"revision": "02d3668a0cf01f58411cc85cd37c174c257ec7c2",
+			"revisionTime": "2017-06-01T13:56:11Z"
 		},
 		{
 			"checksumSHA1": "IvdiJE1NIogRmGi3WmteEKZQJB8=",
@@ -472,6 +472,12 @@
 			"path": "github.com/googleapis/gax-go",
 			"revision": "da06d194a00e19ce00d9011a13931c3f6f6887c7",
 			"revisionTime": "2016-11-07T00:24:06Z"
+		},
+		{
+ 			"checksumSHA1": "PFtXkXPO7pwRtykVUUXtc07wc7U=",
+ 			"path": "github.com/google/gofuzz",
+ 			"revision": "24818f796faf91cd76ec7bddd72458fbced7a6c1",
+ 			"revisionTime": "2017-06-12T17:47:53Z"
 		},
 		{
 			"checksumSHA1": "cdOCt0Yb+hdErz8NAQqayxPmRsY=",
@@ -642,10 +648,10 @@
 			"revisionTime": "2015-06-09T07:04:31Z"
 		},
 		{
-			"checksumSHA1": "JJsKjmgNTUTaEHEEAQgb9jCGGiM=",
+			"checksumSHA1": "uG7wNsy24v7bJxFmWVcL3v5Wvx0=",
 			"path": "github.com/hashicorp/memberlist",
-			"revision": "6cc6075ba9fba1915fa0416f00d2b4efa9dc2262",
-			"revisionTime": "2017-03-17T22:24:04Z"
+			"revision": "0a136466d82a7e6f1b7866dde3578ac28ed675ad",
+			"revisionTime": "2017-06-22T10:25:31Z"
 		},
 		{
 			"checksumSHA1": "qnlqWJYV81ENr61SZk9c65R1mDo=",
@@ -668,18 +674,18 @@
 			"revisionTime": "2015-02-01T20:08:39Z"
 		},
 		{
-			"checksumSHA1": "E3Xcanc9ouQwL+CZGOUyA/+giLg=",
+			"checksumSHA1": "/oss17GO4hXGM7QnUdI3VzcAHzA=",
 			"comment": "v0.7.0-66-g6c4672d",
 			"path": "github.com/hashicorp/serf/coordinate",
-			"revision": "114430d8210835d66defdc31cdc176c58e060005",
-			"revisionTime": "2016-08-09T01:42:04Z"
+			"revision": "c2e4be24cdc9031eb0ad869c5d160775efdf7d7a",
+			"revisionTime": "2017-05-25T23:15:04Z"
 		},
 		{
-			"checksumSHA1": "AZ4RoXStVz6qx38ZMZAyC6Gw3Q4=",
+			"checksumSHA1": "3LFg00GII0KbMRpqi38MRkMhoyM=",
 			"comment": "v0.7.0-66-g6c4672d",
 			"path": "github.com/hashicorp/serf/serf",
-			"revision": "c5e26c3704ca774760df65ee8cbb039d9d9ec560",
-			"revisionTime": "2017-02-08T21:49:39Z"
+			"revision": "91fd53b1d3e624389ed9a295a3fa380e5c7b9dfc",
+			"revisionTime": "2017-06-14T22:59:51Z"
 		},
 		{
 			"checksumSHA1": "ZhK6IO2XN81Y+3RAjTcVm1Ic7oU=",
@@ -706,10 +712,10 @@
 			"revisionTime": "2016-07-26T03:20:27Z"
 		},
 		{
-			"checksumSHA1": "yF39M9MGatDbq2d2oqlLy44jsRc=",
+			"checksumSHA1": "bUuI7AVR3IZPLlBaEKmw/ke7wqA=",
 			"path": "github.com/mitchellh/cli",
-			"revision": "168daae10d6ff81b8b1201b0a4c9607d7e9b82e3",
-			"revisionTime": "2016-03-23T17:07:00Z"
+			"revision": "b481eac70eea3ad671b7c360a013f89bb759b252",
+			"revisionTime": "2017-05-23T17:27:49Z"
 		},
 		{
 			"checksumSHA1": "86nE93o1VIND0Doe8PuhCXnhUx0=",
@@ -768,10 +774,10 @@
 			"revisionTime": "2017-02-08T16:47:21Z"
 		},
 		{
-			"checksumSHA1": "9rCHOi3ELajBtQUPWxxmEo/Nalk=",
+			"checksumSHA1": "BkNqcAh64gp36lSe81ws3zKSWEE=",
 			"path": "github.com/shirou/gopsutil",
-			"revision": "32b6636de04b303274daac3ca2b10d3b0e4afc35",
-			"revisionTime": "2017-02-04T05:36:48Z"
+			"revision": "e30b7839cd6161b2fbef5f187377a345157abe04",
+			"revisionTime": "2017-06-02T00:51:11Z"
 		},
 		{
 			"checksumSHA1": "zW2k8E1gkuySzTz2eXuSEDhpffY=",
