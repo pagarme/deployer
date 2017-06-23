@@ -13,7 +13,7 @@ import (
 )
 
 type Options struct {
-	BuildDirectory  string `mapatructure:"build_directory"`
+	BuildDirectory  string `mapstructure:"build_directory"`
 	ImageRepository string `mapstructure:"image_repository"`
 }
 
