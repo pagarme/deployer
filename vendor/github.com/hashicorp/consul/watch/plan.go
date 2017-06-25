@@ -57,6 +57,7 @@ OUTER:
 		if err != nil {
 			// Perform an exponential backoff
 			failures++
+			p.lastIndex = 0
 			retry := retryInterval * time.Duration(failures*failures)
 			if retry > maxBackoffTime {
 				retry = maxBackoffTime
@@ -84,6 +85,9 @@ OUTER:
 		p.lastIndex = index
 		if oldIndex != 0 && reflect.DeepEqual(p.lastResult, result) {
 			continue
+		}
+		if p.lastIndex < oldIndex {
+			p.lastIndex = 0
 		}
 
 		// Handle the updated result
@@ -113,4 +117,10 @@ func (p *Plan) shouldStop() bool {
 	default:
 		return false
 	}
+}
+
+func (p *Plan) IsStopped() bool {
+	p.stopLock.Lock()
+	defer p.stopLock.Unlock()
+	return p.stop
 }

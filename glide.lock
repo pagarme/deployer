@@ -1,8 +1,8 @@
 hash: 5f04468c473ac7481981a6335d9ac698e32609e6e9d3c38f15bf48b04863fc21
-updated: 2017-05-24T20:17:19.078698622-03:00
+updated: 2017-06-25T13:23:14.465761852-03:00
 imports:
 - name: github.com/armon/go-metrics
-  version: 93f237eba9b0602f3e73710416558854a81d9337
+  version: f036747b9d0e8590f175a5d654a2194a7d9df4b5
 - name: github.com/armon/go-radix
   version: 4239b77079c7b5d1243b7b4736304ce8ddb6f0f2
 - name: github.com/bgentry/speakeasy
@@ -10,7 +10,7 @@ imports:
 - name: github.com/gorhill/cronexpr
   version: d520615e531a6bf3fb69406b9eba718261285ec8
 - name: github.com/hashicorp/consul
-  version: d3153a2369621e38c98d98e0c2868d2eb6474612
+  version: 1dc57ce5e4729b86cbdd2b5c8c9ad55ffd1ca3b7
   subpackages:
   - api
 - name: github.com/hashicorp/errwrap
@@ -22,7 +22,7 @@ imports:
   subpackages:
   - codec
 - name: github.com/hashicorp/go-multierror
-  version: ed905158d87462226a13fe39ddf685ea65f1c11f
+  version: 83588e72410abfbe4df460eeb6f30841ae47d4c4
 - name: github.com/hashicorp/go-rootcerts
   version: 6bb64b370b90e7ef1fa532be9e591a81c3493e00
 - name: github.com/hashicorp/go-version
@@ -48,9 +48,9 @@ imports:
   - jobspec
   - nomad/structs
 - name: github.com/hashicorp/raft
-  version: 27f25bcc392fce1551deefe8a58b0d4d233fa2f8
+  version: 37d2320db05ca622195063977ff5d4fbe0cd8ed8
 - name: github.com/hashicorp/serf
-  version: 0f963c62b0b008a5342bf18db64a7da04d83ca30
+  version: 91fd53b1d3e624389ed9a295a3fa380e5c7b9dfc
   subpackages:
   - coordinate
 - name: github.com/mattn/go-isatty
@@ -58,11 +58,11 @@ imports:
 - name: github.com/mitchellh/cli
   version: b481eac70eea3ad671b7c360a013f89bb759b252
 - name: github.com/mitchellh/copystructure
-  version: f81071c9d77b7931f78c90b416a074ecdc50e959
+  version: d23ffcb85de31694d6ccaa23ccb4a03e55c1303f
 - name: github.com/mitchellh/go-homedir
   version: b8bc1bf767474819792c23f32d8286a45736f1c6
 - name: github.com/mitchellh/hashstructure
-  version: 9204ce590301a868e3e86938bc12eadd416b211e
+  version: 2bca23e0e452137f789efbc8610126fd8b94f73b
 - name: github.com/mitchellh/mapstructure
   version: d0303fe809921458f417bcf828397a65db30a7e4
 - name: github.com/mitchellh/reflectwalk
@@ -78,11 +78,13 @@ imports:
   - token
   - types
 - name: github.com/ugorji/go
-  version: 708a42d246822952f38190a8d8c4e6b16a0e600c
+  version: 5efa3251c7f7d05e5d9704a69a984ec9f1386a40
   subpackages:
   - codec
+- name: github.com/xanzy/ssh-agent
+  version: ba9c9e33906f58169366275e3450db66139a31a9
 - name: golang.org/x/crypto
-  version: 7e9105388ebff089b3f99f0ef676ea55a6da3a7e
+  version: adbae1b6b6fb4b02448a0fc0dbbc9ba2b95b294d
   subpackages:
   - curve25519
   - ed25519
@@ -91,15 +93,18 @@ imports:
   - ssh/agent
   - ssh/knownhosts
 - name: golang.org/x/sys
-  version: a55a76086885b80f79961eacb876ebd8caf3868d
+  version: c23410a886927bab8ca5e80b08af6a56faeb330d
   subpackages:
   - unix
-- name: gopkg.in/src-d/go-billy.v2
-  version: 52497601f113730d14baa00453674376fca22f22
+- name: gopkg.in/src-d/go-billy.v3
+  version: e501c17e5a47cc1adfdf16fbf54e60e6dafb92c2
   subpackages:
+  - helper/chroot
+  - helper/polyfill
   - osfs
+  - util
 - name: gopkg.in/src-d/go-git.v4
-  version: 7e249dfcf28765939bde8f38784b3274b522f880
+  version: 2d02297a9156390d1a23584bd9d9833c65998f40
   repo: https://github.com/src-d/go-git.git
   subpackages:
   - config
@@ -109,6 +114,7 @@ imports:
   - plumbing/filemode
   - plumbing/format/config
   - plumbing/format/diff
+  - plumbing/format/gitignore
   - plumbing/format/idxfile
   - plumbing/format/index
   - plumbing/format/objfile
@@ -145,5 +151,5 @@ imports:
 - name: gopkg.in/yaml.v2
   version: cd8b52f8269e0feb286dfeef29f8fe4d5b397e0b
 - name: srcd.works/go-git.v4
-  version: 7e249dfcf28765939bde8f38784b3274b522f880
+  version: ad02bf020460c210660db4fffda7f926b6aae95a
 testImports: []

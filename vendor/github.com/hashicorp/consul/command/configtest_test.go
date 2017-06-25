@@ -6,26 +6,27 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/hashicorp/consul/command/base"
 	"github.com/hashicorp/consul/testutil"
 	"github.com/mitchellh/cli"
 )
 
 func testConfigTestCommand(t *testing.T) (*cli.MockUi, *ConfigTestCommand) {
-	ui := new(cli.MockUi)
+	ui := cli.NewMockUi()
 	return ui, &ConfigTestCommand{
-		Command: base.Command{
+		BaseCommand: BaseCommand{
 			UI:    ui,
-			Flags: base.FlagSetNone,
+			Flags: FlagSetNone,
 		},
 	}
 }
 
 func TestConfigTestCommand_implements(t *testing.T) {
+	t.Parallel()
 	var _ cli.Command = &ConfigTestCommand{}
 }
 
 func TestConfigTestCommandFailOnEmptyFile(t *testing.T) {
+	t.Parallel()
 	tmpFile := testutil.TempFile(t, "consul")
 	defer os.RemoveAll(tmpFile.Name())
 
@@ -41,6 +42,7 @@ func TestConfigTestCommandFailOnEmptyFile(t *testing.T) {
 }
 
 func TestConfigTestCommandSucceedOnEmptyDir(t *testing.T) {
+	t.Parallel()
 	td := testutil.TempDir(t, "consul")
 	defer os.RemoveAll(td)
 
@@ -56,6 +58,7 @@ func TestConfigTestCommandSucceedOnEmptyDir(t *testing.T) {
 }
 
 func TestConfigTestCommandSucceedOnMinimalConfigFile(t *testing.T) {
+	t.Parallel()
 	td := testutil.TempDir(t, "consul")
 	defer os.RemoveAll(td)
 
@@ -77,6 +80,7 @@ func TestConfigTestCommandSucceedOnMinimalConfigFile(t *testing.T) {
 }
 
 func TestConfigTestCommandSucceedOnMinimalConfigDir(t *testing.T) {
+	t.Parallel()
 	td := testutil.TempDir(t, "consul")
 	defer os.RemoveAll(td)
 
@@ -97,6 +101,7 @@ func TestConfigTestCommandSucceedOnMinimalConfigDir(t *testing.T) {
 }
 
 func TestConfigTestCommandSucceedOnConfigDirWithEmptyFile(t *testing.T) {
+	t.Parallel()
 	td := testutil.TempDir(t, "consul")
 	defer os.RemoveAll(td)
 

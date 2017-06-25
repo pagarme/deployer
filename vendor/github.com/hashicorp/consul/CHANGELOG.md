@@ -1,21 +1,56 @@
-## 0.8.4 (UNRELEASED)
+## 0.8.5 (UNRELEASED)
+
+BREAKING CHANGES:
+
+* agent: Parse values given to `?passing` for health endpoints. Previously Consul only checked for the existence of the querystring, not the value. That means using `?passing=false` would actually still include passing values. Consul now parses the value given to passing as a boolean. If no value is provided, the old behavior remains. This may be a breaking change for some users, but the old experience was incorrect and caused enough confusion to warrant changing it. [GH-2212, GH-3136]
+* agent: The default value of [`-disable-host-node-id`](https://www.consul.io/docs/agent/options.html#_disable_host_node_id) has been changed from false to true. This means you need to opt-in to host-based node IDs and by default Consul will generate a random node ID. A high number of users struggled to deploy newer versions of Consul with host-based IDs because of various edge cases of how the host IDs work in Docker, on specially-provisioned machines, etc. so changing this from opt-out to opt-in will ease operations for many Consul users. [GH-3171]
+
+IMPROVEMENTS:
+
+* agent: Added a `-disable-keyring-file` option to prevent writing keyring data to disk. [GH-3145]
+* agent: Added automatic notify to systemd on Linux after LAN join is complete, which makes it easier to order services that depend on Consul being available. [GH-2121]
+* agent: Added a new agent-level configuration option to default all HTTP requests to `?stale` mode. As part of this change, the `http_api_response_headers` config has been moved into a new `http_config` struct, so the old form is still supported but is deprecated. [GH-3142]
+* dns: Added support for EDNS(0) size adjustments if set in the request frame. This allows DNS responses via UDP which are larger than the standard 512 bytes max if the requesting client can support it. [GH-1980, GH-3131]
+* server: Added a startup warning for servers when expecting to bootstrap with an even number of nodes. [GH-1282]
+* agent: (Consul Enterprise) Added support for non rotating, statically named snapshots for S3 snapshots using the snapshot agent.
+
+BUG FIXES:
+
+* agent: Fixed a regression where configuring -1 for the port was no longer disabling the DNS server. [GH-3135]
+* agent: Fix `consul leave` shutdown race. When shutting down an agent via the `consul leave` command on the command line the output would be `EOF` instead of `Graceful leave completed` [GH-2880]
+* agent: Show a better error message than 'EOF' when attempting to join with the wrong gossip key. [GH-1013]
+* agent: Fixed an issue where the `Method` and `Header` features of HTTP health checks were not being applied. [GH-3178]
+* agent: Fixed an issue where internally-configured watches were not working because of an incorrect protocol error, and unified internal watch handling during reloads of the Consul agent. [GH-3177]
+* server: Fixed an issue where the leader could return stale data duing queries as it is starting up. [GH-2644]
+
+## 0.8.4 (June 9, 2017)
 
 FEATURES:
+
+* agent: Added a method for [transitioning to gossip encryption on an existing cluster](https://www.consul.io/docs/agent/encryption.html#configuring-gossip-encryption-on-an-existing-cluster). [GH-3079]
+* agent: Added a method for [transitioning to TLS on an existing cluster](https://www.consul.io/docs/agent/encryption.html#configuring-tls-on-an-existing-cluster). [GH-1705]
+* agent: Added support for [RetryJoin on Azure](https://www.consul.io/docs/agent/options.html#retry_join_azure). [GH-2978]
+* agent: (Consul Enterprise) Added [AWS server side encryption support](http://docs.aws.amazon.com/AmazonS3/latest/dev/UsingServerSideEncryption.html) for S3 snapshots using the snapshot agent.
 
 IMPROVEMENTS:
 
 * agent: Added a check which prevents advertising or setting a service to a zero address (`0.0.0.0`, `[::]`, `::`). [GH-2961]
 * agent: Allow binding to any public IPv6 address with `::` [GH-2285]
-* agent: Added a method for gracefully transitioning to TLS on an existing cluster. [GH-1705]
 * agent: Removed SCADA-related code for Atlas and deprecated all Atlas-related configuration options. [GH-3032]
 * agent: Added support for custom check id and name when registering checks along with a service. [GH-3047]
 * agent: Updated [go-sockaddr](https://github.com/hashicorp/go-sockaddr) library to add support for new helper functions in bind address templates (`GetPrivateIPs`, `GetPublicIPs`), new math functions, and to pick up fixes for issues with detecting addresses on multi-homed hosts. [GH-3068]
-* agent: Added support for RetryJoin on Azure [GH-2978]
+* agent: Watches now reset their index back to zero after an error, or if the index goes backwards, which allows watches to recover after a server restart with fresh state. [GH-2621]
+* agent: HTTP health checks now support custom method and headers. [GH-1184, GH-2474, GH-2657, GH-3106]
+* agent: Increased the graceful leave timeout from 5 to 15 seconds. [GH-3121]
+* agent: Added additional logging when the agent handles signals and when it exits. [GH-3124]
 * build: Added support for linux/arm64 binaries. [GH-3042]
+* build: Consul now builds with Go 1.8.3. [GH-3074]
 * ui: Added a sticky scroll to the KV side panel so the KV edit box always stays in place. [GH-2812]
 
 BUG FIXES:
 
+* agent: Added defensive code to prevent agents from infecting the network coordinates with `NaN` or `Inf` values, and added code to clean up in environments where this has happened. [GH-3023]
+* api: Added code to always read from the body of a request so that connections will always be returned to the pool. [GH-2850]
 * build: Added a vendor fix to allow compilation on Illumos. [GH-3024]
 * cli: Fixed an issue where `consul exec` would return a 0 exit code, even when there were nodes that didn't respond. [GH-2757]
 

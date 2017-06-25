@@ -6,26 +6,27 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/hashicorp/consul/command/base"
 	"github.com/hashicorp/consul/testutil"
 	"github.com/mitchellh/cli"
 )
 
 func testValidateCommand(t *testing.T) (*cli.MockUi, *ValidateCommand) {
-	ui := new(cli.MockUi)
+	ui := cli.NewMockUi()
 	return ui, &ValidateCommand{
-		Command: base.Command{
+		BaseCommand: BaseCommand{
 			UI:    ui,
-			Flags: base.FlagSetNone,
+			Flags: FlagSetNone,
 		},
 	}
 }
 
 func TestValidateCommand_implements(t *testing.T) {
+	t.Parallel()
 	var _ cli.Command = &ValidateCommand{}
 }
 
 func TestValidateCommandFailOnEmptyFile(t *testing.T) {
+	t.Parallel()
 	tmpFile := testutil.TempFile(t, "consul")
 	defer os.RemoveAll(tmpFile.Name())
 
@@ -39,6 +40,7 @@ func TestValidateCommandFailOnEmptyFile(t *testing.T) {
 }
 
 func TestValidateCommandSucceedOnEmptyDir(t *testing.T) {
+	t.Parallel()
 	td := testutil.TempDir(t, "consul")
 	defer os.RemoveAll(td)
 
@@ -52,6 +54,7 @@ func TestValidateCommandSucceedOnEmptyDir(t *testing.T) {
 }
 
 func TestValidateCommandSucceedOnMinimalConfigFile(t *testing.T) {
+	t.Parallel()
 	td := testutil.TempDir(t, "consul")
 	defer os.RemoveAll(td)
 
@@ -71,6 +74,7 @@ func TestValidateCommandSucceedOnMinimalConfigFile(t *testing.T) {
 }
 
 func TestValidateCommandSucceedOnMinimalConfigDir(t *testing.T) {
+	t.Parallel()
 	td := testutil.TempDir(t, "consul")
 	defer os.RemoveAll(td)
 
@@ -89,6 +93,7 @@ func TestValidateCommandSucceedOnMinimalConfigDir(t *testing.T) {
 }
 
 func TestValidateCommandSucceedOnConfigDirWithEmptyFile(t *testing.T) {
+	t.Parallel()
 	td := testutil.TempDir(t, "consul")
 	defer os.RemoveAll(td)
 
@@ -107,6 +112,7 @@ func TestValidateCommandSucceedOnConfigDirWithEmptyFile(t *testing.T) {
 }
 
 func TestValidateCommandQuiet(t *testing.T) {
+	t.Parallel()
 	td := testutil.TempDir(t, "consul")
 	defer os.RemoveAll(td)
 
@@ -117,7 +123,7 @@ func TestValidateCommandQuiet(t *testing.T) {
 	if code := cmd.Run(args); code != 0 {
 		t.Fatalf("bad: %d, %s", code, ui.ErrorWriter.String())
 	}
-	if ui.OutputWriter.String() != "<nil>" {
+	if ui.OutputWriter.String() != "" {
 		t.Fatalf("bad: %v", ui.OutputWriter.String())
 	}
 }

@@ -13,9 +13,9 @@ import (
 
 	"github.com/src-d/go-git-fixtures"
 	. "gopkg.in/check.v1"
-	"gopkg.in/src-d/go-billy.v2"
-	"gopkg.in/src-d/go-billy.v2/memfs"
-	"gopkg.in/src-d/go-billy.v2/osfs"
+	"gopkg.in/src-d/go-billy.v3/memfs"
+	"gopkg.in/src-d/go-billy.v3/osfs"
+	"gopkg.in/src-d/go-billy.v3/util"
 )
 
 type WorktreeSuite struct {
@@ -54,6 +54,35 @@ func (s *WorktreeSuite) TestCheckout(c *C) {
 	idx, err := s.Repository.Storer.Index()
 	c.Assert(err, IsNil)
 	c.Assert(idx.Entries, HasLen, 9)
+}
+
+func (s *WorktreeSuite) TestCheckoutSymlink(c *C) {
+	dir, err := ioutil.TempDir("", "checkout")
+	defer os.RemoveAll(dir)
+
+	r, err := PlainInit(dir, false)
+	c.Assert(err, IsNil)
+
+	w, err := r.Worktree()
+	c.Assert(err, IsNil)
+
+	w.fs.Symlink("not-exists", "bar")
+	w.Add("bar")
+	w.Commit("foo", &CommitOptions{Author: defaultSignature()})
+
+	r.Storer.SetIndex(&index.Index{Version: 2})
+	w.fs = osfs.New(filepath.Join(dir, "worktree-empty"))
+
+	err = w.Checkout(&CheckoutOptions{})
+	c.Assert(err, IsNil)
+
+	status, err := w.Status()
+	c.Assert(err, IsNil)
+	c.Assert(status.IsClean(), Equals, true)
+
+	target, err := w.fs.Readlink("bar")
+	c.Assert(target, Equals, "not-exists")
+	c.Assert(err, IsNil)
 }
 
 func (s *WorktreeSuite) TestCheckoutSubmodule(c *C) {
@@ -278,6 +307,35 @@ func (s *WorktreeSuite) testCheckoutBisect(c *C, url string) {
 	})
 }
 
+func (s *WorktreeSuite) TestCheckoutWithGitignore(c *C) {
+	fs := memfs.New()
+	w := &Worktree{
+		r:  s.Repository,
+		fs: fs,
+	}
+
+	err := w.Checkout(&CheckoutOptions{})
+	c.Assert(err, IsNil)
+
+	f, _ := fs.Create("file")
+	f.Close()
+
+	err = w.Checkout(&CheckoutOptions{})
+	c.Assert(err.Error(), Equals, "worktree contains unstagged changes")
+
+	f, _ = fs.Create(".gitignore")
+	f.Write([]byte("file"))
+	f.Close()
+
+	err = w.Checkout(&CheckoutOptions{})
+	c.Assert(err.Error(), Equals, "worktree contains unstagged changes")
+
+	w.Add(".gitignore")
+
+	err = w.Checkout(&CheckoutOptions{})
+	c.Assert(err, IsNil)
+}
+
 func (s *WorktreeSuite) TestStatus(c *C) {
 	fs := memfs.New()
 	w := &Worktree{
@@ -428,6 +486,53 @@ func (s *WorktreeSuite) TestStatusModified(c *C) {
 	c.Assert(status.File(".gitignore").Worktree, Equals, Modified)
 }
 
+func (s *WorktreeSuite) TestStatusIgnored(c *C) {
+	fs := memfs.New()
+	w := &Worktree{
+		r:  s.Repository,
+		fs: fs,
+	}
+
+	w.Checkout(&CheckoutOptions{})
+
+	fs.MkdirAll("another", os.ModePerm)
+	f, _ := fs.Create("another/file")
+	f.Close()
+	fs.MkdirAll("vendor/github.com", os.ModePerm)
+	f, _ = fs.Create("vendor/github.com/file")
+	f.Close()
+	fs.MkdirAll("vendor/gopkg.in", os.ModePerm)
+	f, _ = fs.Create("vendor/gopkg.in/file")
+	f.Close()
+
+	status, _ := w.Status()
+	c.Assert(len(status), Equals, 3)
+	_, ok := status["another/file"]
+	c.Assert(ok, Equals, true)
+	_, ok = status["vendor/github.com/file"]
+	c.Assert(ok, Equals, true)
+	_, ok = status["vendor/gopkg.in/file"]
+	c.Assert(ok, Equals, true)
+
+	f, _ = fs.Create(".gitignore")
+	f.Write([]byte("vendor/g*/"))
+	f.Close()
+	f, _ = fs.Create("vendor/.gitignore")
+	f.Write([]byte("!github.com/\n"))
+	f.Close()
+
+	status, _ = w.Status()
+	c.Assert(len(status), Equals, 4)
+	_, ok = status[".gitignore"]
+	c.Assert(ok, Equals, true)
+	_, ok = status["another/file"]
+	c.Assert(ok, Equals, true)
+	_, ok = status["vendor/.gitignore"]
+	c.Assert(ok, Equals, true)
+	_, ok = status["vendor/github.com/file"]
+	c.Assert(ok, Equals, true)
+}
+
 func (s *WorktreeSuite) TestStatusUntracked(c *C) {
 	fs := memfs.New()
 	w := &Worktree{
@@ -471,7 +576,7 @@ func (s *WorktreeSuite) TestStatusDeleted(c *C) {
 }
 
 func (s *WorktreeSuite) TestSubmodule(c *C) {
-	path := fixtures.ByTag("submodule").One().Worktree().Base()
+	path := fixtures.ByTag("submodule").One().Worktree().Root()
 	r, err := PlainOpen(path)
 	c.Assert(err, IsNil)
 
@@ -485,7 +590,7 @@ func (s *WorktreeSuite) TestSubmodule(c *C) {
 }
 
 func (s *WorktreeSuite) TestSubmodules(c *C) {
-	path := fixtures.ByTag("submodule").One().Worktree().Base()
+	path := fixtures.ByTag("submodule").One().Worktree().Root()
 	r, err := PlainOpen(path)
 	c.Assert(err, IsNil)
 
@@ -512,7 +617,7 @@ func (s *WorktreeSuite) TestAddUntracked(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(idx.Entries, HasLen, 9)
 
-	err = billy.WriteFile(w.fs, "foo", []byte("FOO"), 0755)
+	err = util.WriteFile(w.fs, "foo", []byte("FOO"), 0755)
 	c.Assert(err, IsNil)
 
 	hash, err := w.Add("foo")
@@ -535,6 +640,11 @@ func (s *WorktreeSuite) TestAddUntracked(c *C) {
 	file := status.File("foo")
 	c.Assert(file.Staging, Equals, Added)
 	c.Assert(file.Worktree, Equals, Unmodified)
+
+	obj, err := w.r.Storer.EncodedObject(plumbing.BlobObject, hash)
+	c.Assert(err, IsNil)
+	c.Assert(obj, NotNil)
+	c.Assert(obj.Size(), Equals, int64(3))
 }
 
 func (s *WorktreeSuite) TestAddModified(c *C) {
@@ -551,7 +661,7 @@ func (s *WorktreeSuite) TestAddModified(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(idx.Entries, HasLen, 9)
 
-	err = billy.WriteFile(w.fs, "LICENSE", []byte("FOO"), 0644)
+	err = util.WriteFile(w.fs, "LICENSE", []byte("FOO"), 0644)
 	c.Assert(err, IsNil)
 
 	hash, err := w.Add("LICENSE")
@@ -589,6 +699,34 @@ func (s *WorktreeSuite) TestAddUnmodified(c *C) {
 	hash, err := w.Add("LICENSE")
 	c.Assert(hash.String(), Equals, "c192bd6a24ea1ab01d78686e417c8bdc7c3d197f")
 	c.Assert(err, IsNil)
+}
+
+func (s *WorktreeSuite) TestAddSymlink(c *C) {
+	dir, err := ioutil.TempDir("", "checkout")
+	defer os.RemoveAll(dir)
+
+	r, err := PlainInit(dir, false)
+	c.Assert(err, IsNil)
+	err = util.WriteFile(r.wt, "foo", []byte("qux"), 0644)
+	c.Assert(err, IsNil)
+	err = r.wt.Symlink("foo", "bar")
+	c.Assert(err, IsNil)
+
+	w, err := r.Worktree()
+	c.Assert(err, IsNil)
+	h, err := w.Add("foo")
+	c.Assert(err, IsNil)
+	c.Assert(h, Not(Equals), plumbing.NewHash("19102815663d23f8b75a47e7a01965dcdc96468c"))
+
+	h, err = w.Add("bar")
+	c.Assert(err, IsNil)
+	c.Assert(h, Equals, plumbing.NewHash("19102815663d23f8b75a47e7a01965dcdc96468c"))
+
+	obj, err := w.r.Storer.EncodedObject(plumbing.BlobObject, h)
+	c.Assert(err, IsNil)
+	c.Assert(obj, NotNil)
+	c.Assert(obj.Size(), Equals, int64(3))
+
 }
 
 func (s *WorktreeSuite) TestRemove(c *C) {
