@@ -1,16 +1,60 @@
-hash: 5f04468c473ac7481981a6335d9ac698e32609e6e9d3c38f15bf48b04863fc21
-updated: 2017-06-25T13:23:14.465761852-03:00
+hash: cebadf3aeb8065c855c8227e72e03658e6371a9ee62769c5e5e7f462cd8f1897
+updated: 2017-06-26T11:01:06.304452801-03:00
 imports:
 - name: github.com/armon/go-metrics
   version: f036747b9d0e8590f175a5d654a2194a7d9df4b5
 - name: github.com/armon/go-radix
   version: 4239b77079c7b5d1243b7b4736304ce8ddb6f0f2
+- name: github.com/aws/aws-sdk-go
+  version: 72e42b13da62269f68308fb6068b7ea691a416a4
+  subpackages:
+  - aws
+  - aws/awserr
+  - aws/awsutil
+  - aws/client
+  - aws/client/metadata
+  - aws/corehandlers
+  - aws/credentials
+  - aws/credentials/ec2rolecreds
+  - aws/credentials/endpointcreds
+  - aws/credentials/stscreds
+  - aws/defaults
+  - aws/ec2metadata
+  - aws/endpoints
+  - aws/request
+  - aws/session
+  - aws/signer/v4
+  - internal/shareddefaults
+  - private/protocol
+  - private/protocol/json/jsonutil
+  - private/protocol/jsonrpc
+  - private/protocol/query
+  - private/protocol/query/queryutil
+  - private/protocol/rest
+  - private/protocol/restjson
+  - private/protocol/restxml
+  - private/protocol/xml/xmlutil
+  - service/lambda
+  - service/s3
+  - service/s3/s3iface
+  - service/s3/s3manager
+  - service/sts
 - name: github.com/bgentry/speakeasy
   version: 4aabc24848ce5fd31929f7d1e4ea74d3709c14cd
+- name: github.com/dsnet/compress
+  version: 0ae8e136a5df9e3caf6c0f69983608b07438411b
+  subpackages:
+  - bzip2
+  - bzip2/internal/sais
+  - internal
+  - internal/errors
+  - internal/prefix
+- name: github.com/go-ini/ini
+  version: d3de07a94d22b4a0972deb4b96d790c2c0ce8333
 - name: github.com/gorhill/cronexpr
   version: d520615e531a6bf3fb69406b9eba718261285ec8
 - name: github.com/hashicorp/consul
-  version: 1dc57ce5e4729b86cbdd2b5c8c9ad55ffd1ca3b7
+  version: 4b51d00458da8f6241498d7191b3daf1d1f81159
   subpackages:
   - api
 - name: github.com/hashicorp/errwrap
@@ -53,8 +97,12 @@ imports:
   version: 91fd53b1d3e624389ed9a295a3fa380e5c7b9dfc
   subpackages:
   - coordinate
+- name: github.com/jmespath/go-jmespath
+  version: bd40a432e4c76585ef6b72d3fd96fb9b6dc7b68d
 - name: github.com/mattn/go-isatty
   version: fc9e8d8ef48496124e79ae0df75490096eccf6fe
+- name: github.com/mholt/archiver
+  version: cdc68dd1f170b8dfc1a0d2231b5bb0967ed67006
 - name: github.com/mitchellh/cli
   version: b481eac70eea3ad671b7c360a013f89bb759b252
 - name: github.com/mitchellh/copystructure
@@ -67,6 +115,8 @@ imports:
   version: d0303fe809921458f417bcf828397a65db30a7e4
 - name: github.com/mitchellh/reflectwalk
   version: 8d802ff4ae93611b807597f639c19f76074df5c6
+- name: github.com/nwaples/rardecode
+  version: f22b7ef81a0afac9ce1447d37e5ab8e99fbd2f73
 - name: github.com/sergi/go-diff
   version: feef008d51ad2b3778f85d387ccf91735543008d
   subpackages:
@@ -81,6 +131,12 @@ imports:
   version: 5efa3251c7f7d05e5d9704a69a984ec9f1386a40
   subpackages:
   - codec
+- name: github.com/ulikunitz/xz
+  version: 0c6b41e72360850ca4f98dc341fd999726ea007f
+  subpackages:
+  - internal/hash
+  - internal/xlog
+  - lzma
 - name: github.com/xanzy/ssh-agent
   version: ba9c9e33906f58169366275e3450db66139a31a9
 - name: golang.org/x/crypto
