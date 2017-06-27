@@ -109,7 +109,7 @@ Available types are: `lambda` and `nomad`.
 
 ### Lambda
 
-The Lambda Deploy step updates and deploys existing AWS Lambda functions. It creates a zip file, uploads it to an S3 Bucket and updates the Lambda functions code.
+The Lambda Deploy step updates and deploys existing AWS Lambda functions. It creates a zip file, uploads it to a S3 Bucket and updates the Lambda functions code.
 
 There's a convention that must be followed to name the Lambda functions. The functions names must have the following shape: `env-projectName-functionName`. So a function called `hello-world` from the `pagarme` project on the `live` environment must be called `live-pagarme-hello-world.
 
