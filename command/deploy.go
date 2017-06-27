@@ -17,7 +17,14 @@ type DeployCommand struct {
 
 func (c *DeployCommand) Help() string {
 	helpText := `
-Usage: deployer deploy [options] <path>
+Usage: deployer command [options] <path>
+
+Commands:
+  deploy    Deploy an application using a configuration file
+
+Options:
+  --ref     Source Code Management hash to be fetched (default: master)
+  --env     Environment to be used (default: main)
 	`
 
 	return strings.TrimSpace(helpText)
