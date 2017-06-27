@@ -22,6 +22,7 @@ import (
 type Options struct {
 	S3Key       string
 	S3Bucket    string   `mapstructure:"s3_bucket"`
+	Region      string   `mapstructure:"region"`
 	ProjectName string   `mapstructure:"project_name"`
 	Functions   []string `mapstructure:"functions"`
 	Package     []string `mapstructure:"package"`
@@ -48,6 +49,8 @@ func (l *Lambda) zipPackage(path, filename string) (string, error) {
 
 func (l *Lambda) uploadZipToS3(filename, S3Key string) error {
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
+		Config: aws.Config{Region: aws.String(l.Options.Region)},
+
 		SharedConfigState: session.SharedConfigEnable,
 	}))
 
@@ -82,6 +85,8 @@ func (l *Lambda) updateFunctionsCode(env, S3Key string) error {
 	}
 
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
+		Config: aws.Config{Region: aws.String(l.Options.Region)},
+
 		SharedConfigState: session.SharedConfigEnable,
 	}))
 
