@@ -1,4 +1,5 @@
 # deployer
+[![Build Status](https://travis-ci.org/pagarme/deployer.svg?branch=master)](https://travis-ci.org/pagarme/deployer)
 
 :pager: A tool for fetching, building, pushing and deploying applications.
 
