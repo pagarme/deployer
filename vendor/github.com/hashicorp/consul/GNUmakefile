@@ -4,7 +4,10 @@ GOTOOLS = \
 	github.com/jteeuwen/go-bindata/... \
 	github.com/mitchellh/gox \
 	golang.org/x/tools/cmd/cover \
-	golang.org/x/tools/cmd/stringer
+	golang.org/x/tools/cmd/stringer \
+	github.com/axw/gocov/gocov \
+	gopkg.in/matm/v1/gocov-html
+	
 GOTAGS ?= consul
 GOFILES ?= $(shell go list ./... | grep -v /vendor/)
 GOOS=$(shell go env GOOS)
@@ -33,7 +36,7 @@ dev:
 	cp $(GOPATH)/bin/consul bin/
 	cp $(GOPATH)/bin/consul pkg/$(GOOS)_$(GOARCH)
 
-# linux builds a linux package indpendent of the source platform
+# linux builds a linux package independent of the source platform
 linux:
 	mkdir -p pkg/linux_amd64/
 	GOOS=linux GOARCH=amd64 go build -ldflags '$(GOLDFLAGS)' -tags '$(GOTAGS)' -o pkg/linux_amd64/consul

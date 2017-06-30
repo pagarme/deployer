@@ -1,4 +1,22 @@
-## 0.8.5 (UNRELEASED)
+## 0.9.0 (UNRELEASED)
+
+BREAKING CHANGES:
+
+FEATURES:
+
+IMPROVEMENTS:
+
+* agent: (Consul Enterprise) Snapshot agent rotation uses S3's pagination API, enabling retaining more than a 100 snapshots.
+* api: Added the ability to pass in a `context` as part of the `QueryOptions` during a request. This provides a way to cancel outstanding blocking queries. [GH-3195]
+
+BUG FIXES:
+
+* agent: Fixed an issue where watch plans would take up to 10 minutes to close their connections and give up their file descriptors after reloading Consul. [GH-3018]
+* agent: (Consul Enterprise) Fixed an issue with the snapshot agent where it could get stuck trying to obtain the leader lock after an extended server outage.
+* agent: Fixed HTTP health checks to allow them to set the `Host` header correctly on outgoing requests. [GH-3203]
+* server: Updated the Raft library to pull in a fix where servers that are very far behind in replication can get stuck in a loop trying to install snapshots. [GH-3201]
+
+## 0.8.5 (June 27, 2017)
 
 BREAKING CHANGES:
 
@@ -9,7 +27,7 @@ IMPROVEMENTS:
 
 * agent: Added a `-disable-keyring-file` option to prevent writing keyring data to disk. [GH-3145]
 * agent: Added automatic notify to systemd on Linux after LAN join is complete, which makes it easier to order services that depend on Consul being available. [GH-2121]
-* agent: Added a new agent-level configuration option to default all HTTP requests to `?stale` mode. As part of this change, the `http_api_response_headers` config has been moved into a new `http_config` struct, so the old form is still supported but is deprecated. [GH-3142]
+* agent: The `http_api_response_headers` config has been moved into a new `http_config` struct, so the old form is still supported but is deprecated. [GH-3142]
 * dns: Added support for EDNS(0) size adjustments if set in the request frame. This allows DNS responses via UDP which are larger than the standard 512 bytes max if the requesting client can support it. [GH-1980, GH-3131]
 * server: Added a startup warning for servers when expecting to bootstrap with an even number of nodes. [GH-1282]
 * agent: (Consul Enterprise) Added support for non rotating, statically named snapshots for S3 snapshots using the snapshot agent.

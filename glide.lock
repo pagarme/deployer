@@ -1,5 +1,5 @@
 hash: cebadf3aeb8065c855c8227e72e03658e6371a9ee62769c5e5e7f462cd8f1897
-updated: 2017-06-26T11:01:06.304452801-03:00
+updated: 2017-06-30T16:57:40.669917728-03:00
 imports:
 - name: github.com/armon/go-metrics
   version: f036747b9d0e8590f175a5d654a2194a7d9df4b5
@@ -50,11 +50,11 @@ imports:
   - internal/errors
   - internal/prefix
 - name: github.com/go-ini/ini
-  version: d3de07a94d22b4a0972deb4b96d790c2c0ce8333
+  version: 3d73f4b845efdf9989fffd4b4e562727744a34ba
 - name: github.com/gorhill/cronexpr
   version: d520615e531a6bf3fb69406b9eba718261285ec8
 - name: github.com/hashicorp/consul
-  version: 4b51d00458da8f6241498d7191b3daf1d1f81159
+  version: fb0e4d531bae853eb935c8cede33e4e5254949b9
   subpackages:
   - api
 - name: github.com/hashicorp/errwrap
@@ -140,7 +140,7 @@ imports:
 - name: github.com/xanzy/ssh-agent
   version: ba9c9e33906f58169366275e3450db66139a31a9
 - name: golang.org/x/crypto
-  version: adbae1b6b6fb4b02448a0fc0dbbc9ba2b95b294d
+  version: 5ef0053f77724838734b6945dd364d3847e5de1d
   subpackages:
   - curve25519
   - ed25519
@@ -149,18 +149,18 @@ imports:
   - ssh/agent
   - ssh/knownhosts
 - name: golang.org/x/sys
-  version: c23410a886927bab8ca5e80b08af6a56faeb330d
+  version: 4ed4d404df456f81e878683a0363ed3013a59003
   subpackages:
   - unix
 - name: gopkg.in/src-d/go-billy.v3
-  version: e501c17e5a47cc1adfdf16fbf54e60e6dafb92c2
+  version: c329b7bc7b9d24905d2bc1b85bfa29f7ae266314
   subpackages:
   - helper/chroot
   - helper/polyfill
   - osfs
   - util
 - name: gopkg.in/src-d/go-git.v4
-  version: 2d02297a9156390d1a23584bd9d9833c65998f40
+  version: ce6f5b7c82fc6c2c4d41880ed6b26f921dd9c1c3
   repo: https://github.com/src-d/go-git.git
   subpackages:
   - config
