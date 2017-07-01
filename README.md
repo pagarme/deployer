@@ -140,3 +140,10 @@ deploy:
     - hello  # The full name of the function is `live-pagarme-hello`
     - cowsay # The full name of the function is `live-pagarme-cowsay`
 ```
+
+##
+<p align="center">  
+    <a href="https://github.com/pagarme" style="text-decoration:none; margin-right:2rem;">
+    <img src="https://cdn.rawgit.com/pagarme/brand/9ec30d3d4a6dd8b799bca1c25f60fb123ad66d5b/logo-circle.svg" width="110px" height="110px" />
+  </a>
+</p>
