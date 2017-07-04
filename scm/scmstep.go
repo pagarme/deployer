@@ -2,7 +2,7 @@ package scm
 
 import (
 	"errors"
-	"io/ioutil"
+	"fmt"
 
 	"github.com/pagarme/deployer/pipeline"
 )
@@ -25,11 +25,14 @@ func (s *ScmStep) Execute(ctx pipeline.Context) error {
 		return err
 	}
 
-	workdir, err := ioutil.TempDir("/tmp", "deployer")
+	// workdir, err := ioutil.TempDir("/tmp", "deployer")
+	//
+	// if err != nil {
+	// 	return err
+	// }
 
-	if err != nil {
-		return err
-	}
+	fmt.Println("Remember to create /tmp/superbowleto-deployer")
+	workdir := "/tmp/superbowleto-deployer"
 
 	ctx["ScmPath"] = workdir
 
