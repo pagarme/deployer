@@ -1,5 +1,8 @@
 # deployer
 
+[![Build Status](https://travis-ci.org/pagarme/deployer.svg?branch=master)](https://travis-ci.org/pagarme/deployer)
+[![Go Report Card](https://goreportcard.com/badge/github.com/pagarme/deployer)](https://goreportcard.com/report/github.com/pagarme/deployer)
+
 :pager: A tool for fetching, building, pushing and deploying applications.
 
 ## Install
@@ -142,7 +145,7 @@ deploy:
 ```
 
 ##
-<p align="center">  
+<p align="center">
     <a href="https://github.com/pagarme" style="text-decoration:none; margin-right:2rem;">
     <img src="https://cdn.rawgit.com/pagarme/brand/9ec30d3d4a6dd8b799bca1c25f60fb123ad66d5b/logo-circle.svg" width="110px" height="110px" />
   </a>
