@@ -20,16 +20,20 @@ import (
 )
 
 type Options struct {
-	S3Key       string
 	S3Bucket    string   `mapstructure:"s3_bucket"`
 	Region      string   `mapstructure:"region"`
 	ProjectName string   `mapstructure:"project_name"`
-	Functions   []string `mapstructure:"functions"`
 	Package     []string `mapstructure:"package"`
 }
 
+type Environment struct {
+	Name      string   `mapstructure:"name"`
+	Functions []string `mapstructure:"functions"`
+}
+
 type Lambda struct {
-	Options *Options
+	Environment *Environment
+	Options     *Options
 }
 
 func (l *Lambda) zipPackage(path, filename string) (string, error) {
@@ -76,14 +80,7 @@ func (l *Lambda) uploadZipToS3(filename, S3Key string) error {
 	return nil
 }
 
-func (l *Lambda) updateFunctionsCode(env, S3Key string) error {
-	var functions []string
-
-	for _, function := range l.Options.Functions {
-		functionName := fmt.Sprintf("%s-%s-%s", env, l.Options.ProjectName, function)
-		functions = append(functions, functionName)
-	}
-
+func (l *Lambda) updateFunctionsCode(functions []string, S3Key string) error {
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		Config: aws.Config{Region: aws.String(l.Options.Region)},
 
@@ -127,32 +124,24 @@ func (l *Lambda) updateFunctionsCode(env, S3Key string) error {
 	}
 }
 
-func (l *Lambda) EnvironmentName(ctx pipeline.Context) (string, error) {
-	env, ok := ctx["Environment"].(map[string]interface{})
+func (l *Lambda) Deploy(context pipeline.Context) error {
+	environmentContext, ok := context["Environment"].(map[string]interface{})
 
 	if !ok {
-		return "", fmt.Errorf("could not get %s from %v map", "Environment", ctx)
+		return fmt.Errorf("could not get %s from %v map", "Environment", context)
 	}
 
-	name, ok := env["name"].(string)
+	environment := &Environment{}
 
-	if !ok {
-		return "", fmt.Errorf("could not get %s from %v map", "name", env)
+	if err := mapstructure.Decode(environmentContext, environment); err != nil {
+		return err
 	}
 
-	return name, nil
-}
-
-func (l *Lambda) Deploy(ctx pipeline.Context) error {
-	env, err := l.EnvironmentName(ctx)
-
-	if err != nil {
-		return fmt.Errorf("could not get environment name: %v", err)
-	}
+	l.Environment = environment
 
 	hash := "latest"
 
-	if commitable, ok := ctx["Scm"].(scm.Commitable); ok {
+	if commitable, ok := context["Scm"].(scm.Commitable); ok {
 		hash = commitable.CommitHash()
 
 		if len(hash) > 7 {
@@ -161,12 +150,12 @@ func (l *Lambda) Deploy(ctx pipeline.Context) error {
 	}
 
 	zipName := "lambda.zip"
-	S3Key := fmt.Sprintf("%s/%s/%s", env, hash, zipName)
+	S3Key := fmt.Sprintf("%s/%s/%s", l.Environment.Name, hash, zipName)
 
-	ScmPath, ok := ctx["ScmPath"].(string)
+	ScmPath, ok := context["ScmPath"].(string)
 
 	if !ok {
-		return fmt.Errorf("could not get %s from %v map", "ScmPath", ctx)
+		return fmt.Errorf("could not get %s from %v map", "ScmPath", context)
 	}
 
 	filename, err := l.zipPackage(ScmPath, zipName)
@@ -179,7 +168,7 @@ func (l *Lambda) Deploy(ctx pipeline.Context) error {
 		return err
 	}
 
-	if err := l.updateFunctionsCode(env, S3Key); err != nil {
+	if err := l.updateFunctionsCode(l.Environment.Functions, S3Key); err != nil {
 		return err
 	}
 
