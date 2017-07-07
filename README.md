@@ -114,34 +114,40 @@ Available types are: `lambda` and `nomad`.
 
 The Lambda Deploy step updates and deploys existing AWS Lambda functions. It creates a zip file, uploads it to a S3 Bucket and updates the Lambda functions code.
 
-There's a convention that must be followed to name the Lambda functions. The functions names must have the following shape: `env-projectName-functionName`. So a function called `hello-world` from the `pagarme` project on the `live` environment must be called `live-pagarme-hello-world.
-
-**Note:** This step does not create the AWS Lambda functions, but instead updates existing functions.
+**Note:** This step does not create the AWS Lambda functions, but instead updates existing functions code.
 
 **Options:**
 
 | Options | Description |
 | --- | --- |
-| `project_name` | The name of the project. This will prefix the functions names. |
 | `region` | The AWS region the functions are deployed. |
 | `s3_bucket` | The name of the AWS S3 Bucket that will be used to upload the functions zipped source code |
 | `package` | The source code of the functions. A list of folders and files to include in the zip. |
-| `functions` | The names of the functions (without the `env` and `project_name` prefix. |
+
+**Environment:**
+
+| Options | Description |
+| --- | --- |
+| `name` | The name of the environment. This will be used to compose the S3 key object. |
+| `functions` | A list of the AWS Lambda functions that will be updated |
 
 **Example:**
 
 ```yml
 deploy:
   type: lambda
-  project_name: pagarme
   region: us-east-1
   s3_bucket: pagarme-deploy-s3-bucket
   package: # This will create a zip containing the `dist` and the `node_modules` folders
     - dist
     - node_modules
-  functions: # The function names to be prefixed in the format `env-project-function`
-    - hello  # The full name of the function is `live-pagarme-hello`
-    - cowsay # The full name of the function is `live-pagarme-cowsay`
+
+environment:
+  live:
+    name: live
+    functions:
+      - hello
+      - cowsay
 ```
 
 ##
