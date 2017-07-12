@@ -757,6 +757,18 @@ Consul will not enable TLS for the HTTP API unless the `https` port has been ass
   <br><br>
   The following sub-keys are available:
 
+  * <a name="block_endpoints"></a><a href="#block_endpoints">`block_endpoints`</a>
+    This object is a list of HTTP endpoint prefixes to block on the agent, and defaults to
+    an empty list, meaning all endpoints are enabled. Any endpoint that has a common prefix
+    with one of the entries on this list will be blocked and will return a 403 response code
+    when accessed. For example, to block all of the V1 ACL endpoints, set this to
+    `["/v1/acl"]`, which will block `/v1/acl/create`, `/v1/acl/update`, and the other ACL
+    endpoints that begin with `/v1/acl`. Any CLI commands that use disabled endpoints will
+    no longer function as well. For more general access control, Consul's
+    [ACL system](/docs/guides/acl.html) should be used, but this option is useful for removing
+    access to HTTP endpoints completely, or on specific agents. This is available in Consul
+    0.9.0 and later.
+
   * <a name="response_headers"></a><a href="#response_headers">`response_headers`</a>
     This object allows adding headers to the HTTP API responses.
     For example, the following config can be used to enable
@@ -1165,7 +1177,7 @@ Consul will not enable TLS for the HTTP API unless the `https` port has been ass
 
 ## <a id="ports"></a>Ports Used
 
-Consul requires up to 5 different ports to work properly, some on
+Consul requires up to 6 different ports to work properly, some on
 TCP, UDP, or both protocols. Below we document the requirements for each
 port.
 
@@ -1176,7 +1188,10 @@ port.
   Required by all agents. TCP and UDP.
 
 * Serf WAN (Default 8302). This is used by servers to gossip over the
-  WAN to other servers. TCP and UDP.
+  WAN to other servers. TCP and UDP. As of Consul 0.8, it is recommended to
+  enable connection between servers through port 8302 for both TCP and UDP on
+  the LAN interface as well for the WAN Join Flooding feature. See also:
+  [Consul 0.8.0 CHANGELOG](https://github.com/hashicorp/consul/blob/master/CHANGELOG.md#080-april-5-2017) and [GH-3058](https://github.com/hashicorp/consul/issues/3058)
 
 * CLI RPC (Default 8400). This is used by all agents to handle RPC
   from the CLI, but is deprecated in Consul 0.8 and later. TCP only.

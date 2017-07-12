@@ -1,5 +1,5 @@
-hash: cebadf3aeb8065c855c8227e72e03658e6371a9ee62769c5e5e7f462cd8f1897
-updated: 2017-06-30T16:57:40.669917728-03:00
+hash: 96d10dff585d4676b601018fe62999551de109d94c71d5aac8bc15dd2c03b4a6
+updated: 2017-07-12T15:18:30.14055394-03:00
 imports:
 - name: github.com/armon/go-metrics
   version: f036747b9d0e8590f175a5d654a2194a7d9df4b5
@@ -54,7 +54,7 @@ imports:
 - name: github.com/gorhill/cronexpr
   version: d520615e531a6bf3fb69406b9eba718261285ec8
 - name: github.com/hashicorp/consul
-  version: fb0e4d531bae853eb935c8cede33e4e5254949b9
+  version: 9e83a034e3eb83f470fe6280cd85c25ef275fd30
   subpackages:
   - api
 - name: github.com/hashicorp/errwrap
@@ -92,9 +92,9 @@ imports:
   - jobspec
   - nomad/structs
 - name: github.com/hashicorp/raft
-  version: 37d2320db05ca622195063977ff5d4fbe0cd8ed8
+  version: b3d48f1a4e569bc4d4e456e8930e35b1aa996ea7
 - name: github.com/hashicorp/serf
-  version: 91fd53b1d3e624389ed9a295a3fa380e5c7b9dfc
+  version: e39abe475740649229c5c72b0cc1da10da7ed23a
   subpackages:
   - coordinate
 - name: github.com/jmespath/go-jmespath
@@ -140,7 +140,7 @@ imports:
 - name: github.com/xanzy/ssh-agent
   version: ba9c9e33906f58169366275e3450db66139a31a9
 - name: golang.org/x/crypto
-  version: 5ef0053f77724838734b6945dd364d3847e5de1d
+  version: dd85ac7e6a88fc6ca420478e934de5f1a42dd3c6
   subpackages:
   - curve25519
   - ed25519
@@ -149,7 +149,7 @@ imports:
   - ssh/agent
   - ssh/knownhosts
 - name: golang.org/x/sys
-  version: 4ed4d404df456f81e878683a0363ed3013a59003
+  version: abf9c25f54453410d0c6668e519582a9e1115027
   subpackages:
   - unix
 - name: gopkg.in/src-d/go-billy.v3
@@ -160,7 +160,7 @@ imports:
   - osfs
   - util
 - name: gopkg.in/src-d/go-git.v4
-  version: ce6f5b7c82fc6c2c4d41880ed6b26f921dd9c1c3
+  version: df946d7d1c4551b3c8e87183012e3a48efbbfe76
   repo: https://github.com/src-d/go-git.git
   subpackages:
   - config
@@ -205,7 +205,7 @@ imports:
 - name: gopkg.in/warnings.v0
   version: 8a331561fe74dadba6edfc59f3be66c22c3b065d
 - name: gopkg.in/yaml.v2
-  version: cd8b52f8269e0feb286dfeef29f8fe4d5b397e0b
+  version: 1be3d31502d6eabc0dd7ce5b0daab022e14a5538
 - name: srcd.works/go-git.v4
   version: ad02bf020460c210660db4fffda7f926b6aae95a
 testImports: []

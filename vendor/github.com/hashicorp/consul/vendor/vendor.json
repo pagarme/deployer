@@ -648,10 +648,10 @@
 			"revisionTime": "2015-06-09T07:04:31Z"
 		},
 		{
-			"checksumSHA1": "uG7wNsy24v7bJxFmWVcL3v5Wvx0=",
+			"checksumSHA1": "ooNF6amPOxyz9OULy2hfbtNlIw4=",
 			"path": "github.com/hashicorp/memberlist",
-			"revision": "0a136466d82a7e6f1b7866dde3578ac28ed675ad",
-			"revisionTime": "2017-06-22T10:25:31Z"
+			"revision": "924edbc42f05a6f7ccd6d4184b8147f2c20ae5f3",
+			"revisionTime": "2017-07-07T07:05:14Z"
 		},
 		{
 			"checksumSHA1": "qnlqWJYV81ENr61SZk9c65R1mDo=",
@@ -660,10 +660,10 @@
 			"revisionTime": "2015-11-16T02:03:38Z"
 		},
 		{
-			"checksumSHA1": "bYn+HDmt7YLFvEV6DagMup8mkZE=",
+			"checksumSHA1": "OCPP4JxnuSSmweEL9khCd6OdIts=",
 			"path": "github.com/hashicorp/raft",
-			"revision": "e5e581e04af7c46974b99195347cc0c380c0d841",
-			"revisionTime": "2017-06-09T23:09:26Z",
+			"revision": "e45173826775c4b782961c7b5758ba484b91464b",
+			"revisionTime": "2017-07-10T17:20:01Z",
 			"version": "library-v2-stage-one",
 			"versionExact": "library-v2-stage-one"
 		},
@@ -681,11 +681,11 @@
 			"revisionTime": "2017-05-25T23:15:04Z"
 		},
 		{
-			"checksumSHA1": "3LFg00GII0KbMRpqi38MRkMhoyM=",
+			"checksumSHA1": "o1VR3OEjCXQW/vT1wpUBOYfGrPQ=",
 			"comment": "v0.7.0-66-g6c4672d",
 			"path": "github.com/hashicorp/serf/serf",
-			"revision": "91fd53b1d3e624389ed9a295a3fa380e5c7b9dfc",
-			"revisionTime": "2017-06-14T22:59:51Z"
+			"revision": "6669b5d30985da6dd423ecf65f033cee400203fe",
+			"revisionTime": "2017-07-07T06:54:45Z"
 		},
 		{
 			"checksumSHA1": "ZhK6IO2XN81Y+3RAjTcVm1Ic7oU=",
@@ -906,10 +906,10 @@
 			"revisionTime": "2016-12-14T09:25:55Z"
 		},
 		{
-			"checksumSHA1": "15doxxBfOxOhWExkxjPNo6Y7fEw=",
+			"checksumSHA1": "2ncnCWXu6MhDubZJYmyFNBYsrXE=",
 			"path": "golang.org/x/sys/unix",
-			"revision": "20457ee8ea8546920d3f4e19e405da45250dc5a5",
-			"revisionTime": "2016-01-20T16:03:39Z"
+			"revision": "6faef541c73732f438fb660a212750a9ba9f9362",
+			"revisionTime": "2017-06-30T11:05:18Z"
 		},
 		{
 			"checksumSHA1": "kv3jbPJGCczHVQ7g51am1MxlD1c=",

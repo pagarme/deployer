@@ -97,6 +97,8 @@ RPC:
 		}
 		return info, nil
 	}
+
+	resp.WriteHeader(http.StatusNotFound)
 	return nil, nil
 }
 
