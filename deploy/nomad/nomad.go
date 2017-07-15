@@ -23,7 +23,8 @@ const (
 )
 
 type Options struct {
-	JobFile string `mapstructure:"job_file"`
+	JobFile  string   `mapstructure:"job_file"`
+	JobFiles []string `mapstructure:"job_files"`
 }
 
 type Nomad struct {
@@ -47,46 +48,50 @@ func init() {
 }
 
 func (n *Nomad) Deploy(ctx pipeline.Context) error {
-	jobSource, err := n.compileJob(ctx)
+	jobFiles := append(n.Options.JobFiles, n.Options.JobFile)
 
-	if err != nil {
-		return err
-	}
-
-	job, err := jobspec.Parse(jobSource)
-
-	if err != nil {
-		return err
-	}
-
-	client, err := n.client()
-
-	if err != nil {
-		return err
-	}
-
-	evalID, _, err := client.Jobs().Register(job, nil)
-
-	if err != nil {
-		return err
-	}
-
-	for true {
-		eval, _, err := client.Evaluations().Info(evalID, nil)
+	for _, v := range jobFiles {
+		jobSource, err := n.compileJob(ctx, v)
 
 		if err != nil {
 			return err
 		}
 
-		switch eval.Status {
-		case structs.EvalStatusFailed, structs.EvalStatusCancelled:
-			return fmt.Errorf("allocation failed")
+		job, err := jobspec.Parse(jobSource)
 
-		case structs.EvalStatusComplete:
-			return n.watchJob(client, eval)
+		if err != nil {
+			return err
+		}
 
-		default:
-			time.Sleep(time.Second)
+		client, err := n.client()
+
+		if err != nil {
+			return err
+		}
+
+		evalID, _, err := client.Jobs().Register(job, nil)
+
+		if err != nil {
+			return err
+		}
+
+		for true {
+			eval, _, err := client.Evaluations().Info(evalID, nil)
+
+			if err != nil {
+				return err
+			}
+
+			switch eval.Status {
+			case structs.EvalStatusFailed, structs.EvalStatusCancelled:
+				return fmt.Errorf("allocation failed")
+
+			case structs.EvalStatusComplete:
+				return n.watchJob(client, eval)
+
+			default:
+				time.Sleep(time.Second)
+			}
 		}
 	}
 
@@ -132,10 +137,10 @@ OUTER:
 	return nil
 }
 
-func (n *Nomad) compileJob(ctx pipeline.Context) (io.Reader, error) {
+func (n *Nomad) compileJob(ctx pipeline.Context, jobFile string) (io.Reader, error) {
 	buf := bytes.NewBuffer(nil)
 
-	t, err := template.ParseFiles(n.Options.JobFile)
+	t, err := template.ParseFiles(jobFile)
 
 	if err != nil {
 		return nil, err
