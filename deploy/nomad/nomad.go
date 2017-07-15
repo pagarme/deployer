@@ -23,12 +23,19 @@ const (
 )
 
 type Options struct {
-	JobFile  string   `mapstructure:"job_file"`
-	JobFiles []string `mapstructure:"job_files"`
+	JobFile  interface{}   `mapstructure:"job_file"`
+	JobFiles []interface{} `mapstructure:"job_files"`
+}
+
+type Jobfile struct {
+	File           string `mapstructure:"file"`
+	WaitAllocation bool   `mapstructure:"wait_allocation"`
 }
 
 type Nomad struct {
 	Options *Options
+
+	JobFiles []Jobfile
 }
 
 func init() {
@@ -39,18 +46,36 @@ func init() {
 			return nil, err
 		}
 
+		jobFiles := append(options.JobFiles, options.JobFile)
+		jobs := make([]Jobfile, len(jobFiles))
+
+		for i, v := range jobFiles {
+			var job Jobfile
+
+			switch v := v.(type) {
+			case string:
+				job = Jobfile{File: v, WaitAllocation: true}
+			case map[string]interface{}:
+				if err := mapstructure.Decode(v, &job); err != nil {
+					return nil, err
+				}
+			default:
+				return nil, fmt.Errorf("invalid configuration format")
+			}
+
+			jobs[i] = job
+		}
+
 		if options.JobFile == "" && len(options.JobFiles) == 0 {
 			options.JobFile = "deploy.nomad"
 		}
 
-		return &Nomad{Options: options}, nil
+		return &Nomad{Options: options, JobFiles: jobs}, nil
 	})
 }
 
 func (n *Nomad) Deploy(ctx pipeline.Context) error {
-	jobFiles := append(n.Options.JobFiles, n.Options.JobFile)
-
-	for _, v := range jobFiles {
+	for _, v := range n.JobFiles {
 		jobSource, err := n.compileJob(ctx, v)
 
 		if err != nil {
@@ -75,7 +100,7 @@ func (n *Nomad) Deploy(ctx pipeline.Context) error {
 			return err
 		}
 
-		for true {
+		for v.WaitAllocation {
 			eval, _, err := client.Evaluations().Info(evalID, nil)
 
 			if err != nil {
@@ -137,16 +162,16 @@ OUTER:
 	return nil
 }
 
-func (n *Nomad) compileJob(ctx pipeline.Context, jobFile string) (io.Reader, error) {
+func (n *Nomad) compileJob(ctx pipeline.Context, job Jobfile) (io.Reader, error) {
 	buf := bytes.NewBuffer(nil)
 
-	t, err := template.ParseFiles(jobFile)
+	t, err := template.ParseFiles(job.File)
 
 	if err != nil {
 		return nil, err
 	}
 
-	err = t.ExecuteTemplate(buf, jobFile, ctx)
+	err = t.ExecuteTemplate(buf, job.File, ctx)
 
 	if err != nil {
 		return nil, err
