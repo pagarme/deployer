@@ -39,7 +39,7 @@ func init() {
 			return nil, err
 		}
 
-		if options.JobFile == "" {
+		if options.JobFile == "" && len(options.JobFiles) == 0 {
 			options.JobFile = "deploy.nomad"
 		}
 
@@ -146,7 +146,7 @@ func (n *Nomad) compileJob(ctx pipeline.Context, jobFile string) (io.Reader, err
 		return nil, err
 	}
 
-	err = t.ExecuteTemplate(buf, n.Options.JobFile, ctx)
+	err = t.ExecuteTemplate(buf, jobFile, ctx)
 
 	if err != nil {
 		return nil, err
