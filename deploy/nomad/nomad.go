@@ -55,7 +55,7 @@ func init() {
 			switch v := v.(type) {
 			case string:
 				job = Jobfile{File: v, WaitAllocation: true}
-			case map[string]interface{}:
+			case map[interface{}]interface{}:
 				if err := mapstructure.Decode(v, &job); err != nil {
 					return nil, err
 				}
