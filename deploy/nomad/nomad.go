@@ -52,6 +52,10 @@ func init() {
 		for i, v := range jobFiles {
 			var job Jobfile
 
+			if v == nil {
+				continue
+			}
+
 			switch v := v.(type) {
 			case string:
 				job = Jobfile{File: v, WaitAllocation: true}
@@ -60,7 +64,7 @@ func init() {
 					return nil, err
 				}
 			default:
-				return nil, fmt.Errorf("invalid configuration format")
+				return nil, fmt.Errorf("invalid configuration format %v", v)
 			}
 
 			jobs[i] = job
