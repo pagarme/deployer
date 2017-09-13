@@ -66,14 +66,47 @@ func (c *DeployCommand) Run(args []string) int {
 	pipe.Context["Config"] = cfg
 	pipe.Context["Environment"] = cfg.GetEnvironment(env)
 
-	pipe.Add(&scm.ScmStep{
-		Config: cfg.Scm,
-		Ref:    ref,
-	})
+	if len(cfg.Pipeline) == 0 {
+		pipe.Add(&scm.ScmStep{
+			Config: cfg.Scm,
+			Ref:    ref,
+		})
 
-	pipe.Add(&build.BuildStep{Config: cfg.Build})
+		pipe.Add(&build.BuildStep{Config: cfg.Build})
 
-	pipe.Add(&deploy.DeployStep{Config: cfg.Deploy})
+		pipe.Add(&deploy.DeployStep{Config: cfg.Deploy})
+	} else {
+		for _, v := range cfg.Pipeline {
+			kind := ""
+
+			for k := range v {
+				if k != "scm" && k != "build" && k != "deploy" {
+					continue
+				}
+
+				kind = k
+				break
+			}
+
+			switch kind {
+			case "scm":
+				pipe.Add(&scm.ScmStep{
+					Config: v[kind],
+					Ref:    ref,
+				})
+
+			case "build":
+				pipe.Add(&build.BuildStep{Config: v[kind]})
+
+			case "deploy":
+				pipe.Add(&deploy.DeployStep{Config: v[kind]})
+
+			default:
+				fmt.Printf("Invalid pipeline step\n")
+				return 1
+			}
+		}
+	}
 
 	if err := pipe.Execute(); err != nil {
 		fmt.Printf("An error ocurred during the deployment: %s\n", err)

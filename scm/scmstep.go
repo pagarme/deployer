@@ -13,13 +13,19 @@ type ScmStep struct {
 }
 
 func (s *ScmStep) Execute(ctx pipeline.Context) error {
-	typ, ok := s.Config["type"].(string)
+	cfg, err := ctx.ResolveConfig(s.Config)
+
+	if err != nil {
+		return err
+	}
+
+	typ, ok := cfg["type"].(string)
 
 	if !ok {
 		return errors.New("missing type key")
 	}
 
-	scmInstance, err := New(typ, s.Config)
+	scmInstance, err := New(typ, cfg)
 
 	if err != nil {
 		return err
