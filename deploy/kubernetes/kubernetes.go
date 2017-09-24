@@ -15,9 +15,10 @@ import (
 )
 
 type Options struct {
-	DeploymentDir  string `mapstructure:"deployment_dir"`
-	DeploymentFile string `mapstructure:"deployment_file"`
-	Namespace      string `mapstructure:"namespace"`
+	DeploymentDir   string   `mapstructure:"deployment_dir"`
+	DeploymentFile  string   `mapstructure:"deployment_file"`
+	DeploymentFiles []string `mapstructure:"deployment_files"`
+	Namespace       string   `mapstructure:"namespace"`
 }
 
 type Kubernetes struct {
@@ -32,6 +33,10 @@ func init() {
 			return nil, err
 		}
 
+		if len(options.DeploymentFile) > 0 {
+			options.DeploymentFiles = append(options.DeploymentFiles, options.DeploymentFile)
+		}
+
 		return &Kubernetes{Options: options}, nil
 	})
 }
@@ -43,8 +48,8 @@ func (n *Kubernetes) Deploy(ctx pipeline.Context) error {
 		return err
 	}
 
-	if len(n.Options.DeploymentFile) != 0 {
-		err := n.compileFile(ctx, n.Options.DeploymentFile, path.Join(workdir, "a.yaml"))
+	if len(n.Options.DeploymentFiles) > 0 {
+		err := n.compileFiles(ctx, n.Options.DeploymentFiles, workdir)
 
 		if err != nil {
 			return err
@@ -66,7 +71,7 @@ func (n *Kubernetes) Deploy(ctx pipeline.Context) error {
 	return nil
 }
 
-func (n *Kubernetes) compileDir(ctx pipeline.Context, in, out string) error {
+func (n *Kubernetes) compileDir(ctx pipeline.Context, in, outDir string) error {
 	files, err := ioutil.ReadDir(in)
 
 	if err != nil {
@@ -83,9 +88,8 @@ func (n *Kubernetes) compileDir(ctx pipeline.Context, in, out string) error {
 		}
 
 		inFile := path.Join(in, f.Name())
-		outFile := path.Join(out, f.Name())
 
-		err = n.compileFile(ctx, inFile, outFile)
+		err = n.compileFile(ctx, inFile, outDir)
 
 		if err != nil {
 			return err
@@ -95,7 +99,21 @@ func (n *Kubernetes) compileDir(ctx pipeline.Context, in, out string) error {
 	return nil
 }
 
-func (n *Kubernetes) compileFile(ctx pipeline.Context, in, out string) error {
+func (n *Kubernetes) compileFiles(ctx pipeline.Context, files []string, outDir string) error {
+	for _, file := range files {
+		err := n.compileFile(ctx, file, outDir)
+
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (n *Kubernetes) compileFile(ctx pipeline.Context, in, outDir string) error {
+	out := path.Join(outDir, path.Base(in))
+
 	w, err := os.OpenFile(out, os.O_CREATE|os.O_WRONLY, 0644)
 
 	if err != nil {
