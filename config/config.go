@@ -7,9 +7,12 @@ import (
 )
 
 type Config struct {
-	Scm          map[string]interface{} `yml:"scm"`
-	Build        map[string]interface{} `yml:"build"`
-	Deploy       map[string]interface{} `yml:"deploy"`
+	Pipeline []map[string]map[string]interface{} `yml:"pipeline"`
+
+	Scm    map[string]interface{} `yml:"scm"`
+	Build  map[string]interface{} `yml:"build"`
+	Deploy map[string]interface{} `yml:"deploy"`
+
 	Environments map[string]interface{} `yml:"environments"`
 }
 

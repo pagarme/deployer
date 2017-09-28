@@ -1,18 +1,21 @@
 ---
 
-scm:
-  type: git
-  repository: git@github.com:pagarme/autobahn.git
+pipeline:
+  - scm:
+      type: git
+      repository: git@github.com:pagarme/autobahn.git
 
-build:
-  type: rocker
+  - build:
+      type: rocker
 
-deploy:
-  type: nomad
+  - deploy:
+      type: kubernetes
+      deployment_dir: .
+      namespace: "{{ Environment.namespace }}"
 
 environments:
-  sandbox:
-    name: sandbox
-  live:
-    name: live
+  prd:
+    namespace: core-prd
+  stg:
+    namespace: core-stg
 

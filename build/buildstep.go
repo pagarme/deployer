@@ -11,13 +11,19 @@ type BuildStep struct {
 }
 
 func (s *BuildStep) Execute(ctx pipeline.Context) error {
-	typ, ok := s.Config["type"].(string)
+	cfg, err := ctx.ResolveConfig(s.Config)
+
+	if err != nil {
+		return err
+	}
+
+	typ, ok := cfg["type"].(string)
 
 	if !ok {
 		return errors.New("missing type key")
 	}
 
-	builder, err := New(typ, s.Config)
+	builder, err := New(typ, cfg)
 
 	if err != nil {
 		return err
