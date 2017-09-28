@@ -1,0 +1,15 @@
+builds:
+  - binary: deployer
+    goos:
+      - windows
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm
+      - arm64
+    ignore:
+      - goos: darwin
+        goarch: arm64
+      - goos: darwin
+        goarch: arm
