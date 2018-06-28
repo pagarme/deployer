@@ -7,10 +7,10 @@ import (
 	"regexp"
 
 	"github.com/mitchellh/mapstructure"
-	"gopkg.in/src-d/go-git.v4/plumbing"
-
 	"github.com/pagarme/deployer/pipeline"
 	"github.com/pagarme/deployer/scm"
+	"gopkg.in/src-d/go-git.v4"
+	"gopkg.in/src-d/go-git.v4/plumbing"
 )
 
 type Options struct {
