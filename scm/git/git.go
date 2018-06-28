@@ -7,7 +7,6 @@ import (
 	"regexp"
 
 	"github.com/mitchellh/mapstructure"
-	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 
 	"github.com/pagarme/deployer/pipeline"
@@ -59,7 +58,7 @@ func (g *Git) Fetch(ctx pipeline.Context, workdir, refName string) error {
 		return err
 	}
 
-	ref, err := repo.Reference(plumbing.ReferenceName("refs/remotes/origin/"+refName), true)
+	ref, err := repo.Reference(plumbing.ReferenceName("refs/tags/"+refName), true)
 
 	if err != nil {
 		return err
