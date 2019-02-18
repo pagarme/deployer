@@ -1,7 +1,6 @@
 package packfile
 
 import (
-	"fmt"
 	"math/rand"
 
 	. "gopkg.in/check.v1"
@@ -63,7 +62,7 @@ func (s *DeltaSuite) SetUpSuite(c *C) {
 		target: []piece{{"1", 30}, {"2", 20}, {"7", 40}, {"4", 400},
 			{"5", 10}},
 	}, {
-		description: "A copy operation bigger tan 64kb",
+		description: "A copy operation bigger than 64kb",
 		base:        []piece{{bigRandStr, 1}, {"1", 200}},
 		target:      []piece{{bigRandStr, 1}},
 	}}
@@ -73,12 +72,16 @@ var bigRandStr = randStringBytes(100 * 1024)
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-func randStringBytes(n int) string {
+func randBytes(n int) []byte {
 	b := make([]byte, n)
 	for i := range b {
 		b[i] = letterBytes[rand.Intn(len(letterBytes))]
 	}
-	return string(b)
+	return b
+}
+
+func randStringBytes(n int) string {
+	return string(randBytes(n))
 }
 
 func (s *DeltaSuite) TestAddDelta(c *C) {
@@ -86,9 +89,39 @@ func (s *DeltaSuite) TestAddDelta(c *C) {
 		baseBuf := genBytes(t.base)
 		targetBuf := genBytes(t.target)
 		delta := DiffDelta(baseBuf, targetBuf)
-		result := PatchDelta(baseBuf, delta)
+		result, err := PatchDelta(baseBuf, delta)
 
-		c.Log(fmt.Printf("Executing test case: %s\n", t.description))
+		c.Log("Executing test case:", t.description)
+		c.Assert(err, IsNil)
 		c.Assert(result, DeepEquals, targetBuf)
 	}
+}
+
+func (s *DeltaSuite) TestIncompleteDelta(c *C) {
+	for _, t := range s.testCases {
+		c.Log("Incomplete delta on:", t.description)
+		baseBuf := genBytes(t.base)
+		targetBuf := genBytes(t.target)
+		delta := DiffDelta(baseBuf, targetBuf)
+		delta = delta[:len(delta)-2]
+		result, err := PatchDelta(baseBuf, delta)
+		c.Assert(err, NotNil)
+		c.Assert(result, IsNil)
+	}
+
+	// check nil input too
+	result, err := PatchDelta(nil, nil)
+	c.Assert(err, NotNil)
+	c.Assert(result, IsNil)
+}
+
+func (s *DeltaSuite) TestMaxCopySizeDelta(c *C) {
+	baseBuf := randBytes(maxCopySize)
+	targetBuf := baseBuf[0:]
+	targetBuf = append(targetBuf, byte(1))
+
+	delta := DiffDelta(baseBuf, targetBuf)
+	result, err := PatchDelta(baseBuf, delta)
+	c.Assert(err, IsNil)
+	c.Assert(result, DeepEquals, targetBuf)
 }

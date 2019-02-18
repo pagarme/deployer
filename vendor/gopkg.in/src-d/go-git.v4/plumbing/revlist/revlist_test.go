@@ -4,12 +4,13 @@ import (
 	"testing"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/cache"
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 	"gopkg.in/src-d/go-git.v4/storage/filesystem"
 
-	"github.com/src-d/go-git-fixtures"
 	. "gopkg.in/check.v1"
+	"gopkg.in/src-d/go-git-fixtures.v3"
 )
 
 func Test(t *testing.T) { TestingT(t) }
@@ -51,8 +52,7 @@ const (
 
 func (s *RevListSuite) SetUpTest(c *C) {
 	s.Suite.SetUpSuite(c)
-	sto, err := filesystem.NewStorage(fixtures.Basic().One().DotGit())
-	c.Assert(err, IsNil)
+	sto := filesystem.NewStorage(fixtures.Basic().One().DotGit(), cache.NewObjectLRUDefault())
 	s.Storer = sto
 }
 
@@ -67,8 +67,7 @@ func (s *RevListSuite) TestRevListObjects_Submodules(c *C) {
 		"6ecf0ef2c2dffb796033e5a02219af86ec6584e5": true,
 	}
 
-	sto, err := filesystem.NewStorage(fixtures.ByTag("submodule").One().DotGit())
-	c.Assert(err, IsNil)
+	sto := filesystem.NewStorage(fixtures.ByTag("submodule").One().DotGit(), cache.NewObjectLRUDefault())
 
 	ref, err := storer.ResolveReference(sto, plumbing.HEAD)
 	c.Assert(err, IsNil)
@@ -109,10 +108,9 @@ func (s *RevListSuite) TestRevListObjects(c *C) {
 }
 
 func (s *RevListSuite) TestRevListObjectsTagObject(c *C) {
-	sto, err := filesystem.NewStorage(
+	sto := filesystem.NewStorage(
 		fixtures.ByTag("tags").
-			ByURL("https://github.com/git-fixtures/tags.git").One().DotGit())
-	c.Assert(err, IsNil)
+			ByURL("https://github.com/git-fixtures/tags.git").One().DotGit(), cache.NewObjectLRUDefault())
 
 	expected := map[string]bool{
 		"70846e9a10ef7b41064b40f07713d5b8b9a8fc73": true,
@@ -122,6 +120,32 @@ func (s *RevListSuite) TestRevListObjectsTagObject(c *C) {
 	}
 
 	hist, err := Objects(sto, []plumbing.Hash{plumbing.NewHash("ad7897c0fb8e7d9a9ba41fa66072cf06095a6cfc")}, nil)
+	c.Assert(err, IsNil)
+
+	for _, h := range hist {
+		c.Assert(expected[h.String()], Equals, true)
+	}
+
+	c.Assert(len(hist), Equals, len(expected))
+}
+
+func (s *RevListSuite) TestRevListObjectsWithStorageForIgnores(c *C) {
+	sto := filesystem.NewStorage(
+		fixtures.ByTag("merge-conflict").One().DotGit(),
+		cache.NewObjectLRUDefault())
+
+	// The "merge-conflict" repo has one extra commit in it, with a
+	// two files modified in two different subdirs.
+	expected := map[string]bool{
+		"1980fcf55330d9d94c34abee5ab734afecf96aba": true, // commit
+		"73d9cf44e9045254346c73f6646b08f9302c8570": true, // root dir
+		"e8435d512a98586bd2e4fcfcdf04101b0bb1b500": true, // go/
+		"257cc5642cb1a054f08cc83f2d943e56fd3ebe99": true, // haskal.hs
+		"d499a1a0b79b7d87a35155afd0c1cce78b37a91c": true, // example.go
+		"d108adc364fb6f21395d011ae2c8a11d96905b0d": true, // haskal/
+	}
+
+	hist, err := ObjectsWithStorageForIgnores(sto, s.Storer, []plumbing.Hash{plumbing.NewHash("1980fcf55330d9d94c34abee5ab734afecf96aba")}, []plumbing.Hash{plumbing.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5")})
 	c.Assert(err, IsNil)
 
 	for _, h := range hist {
@@ -216,4 +240,61 @@ func (s *RevListSuite) TestRevListObjectsNewBranch(c *C) {
 		c.Assert(revList[h.String()], Equals, true)
 	}
 	c.Assert(len(remoteHist), Equals, len(revList))
+}
+
+// This tests will ensure that a5b8b09 and b8e471f will be visited even if
+// 35e8510 has already been visited and will not stop iterating until they
+// have been as well.
+//
+// * af2d6a6 some json
+// *   1669dce Merge branch 'master'
+// |\
+// | *   a5b8b09 Merge pull request #1
+// | |\
+// | | * b8e471f Creating changelog
+// | |/
+// * | 35e8510 binary file
+// |/
+// * b029517 Initial commit
+func (s *RevListSuite) TestReachableObjectsNoRevisit(c *C) {
+	obj, err := s.Storer.EncodedObject(plumbing.CommitObject, plumbing.NewHash("af2d6a6954d532f8ffb47615169c8fdf9d383a1a"))
+	c.Assert(err, IsNil)
+
+	do, err := object.DecodeObject(s.Storer, obj)
+	c.Assert(err, IsNil)
+
+	commit, ok := do.(*object.Commit)
+	c.Assert(ok, Equals, true)
+
+	var visited []plumbing.Hash
+	err = reachableObjects(
+		commit,
+		map[plumbing.Hash]bool{
+			plumbing.NewHash("35e85108805c84807bc66a02d91535e1e24b38b9"): true,
+		},
+		map[plumbing.Hash]bool{
+			plumbing.NewHash("35e85108805c84807bc66a02d91535e1e24b38b9"): true,
+		},
+		nil,
+		func(h plumbing.Hash) {
+			obj, err := s.Storer.EncodedObject(plumbing.AnyObject, h)
+			c.Assert(err, IsNil)
+
+			do, err := object.DecodeObject(s.Storer, obj)
+			c.Assert(err, IsNil)
+
+			if _, ok := do.(*object.Commit); ok {
+				visited = append(visited, h)
+			}
+		},
+	)
+	c.Assert(err, IsNil)
+
+	c.Assert(visited, DeepEquals, []plumbing.Hash{
+		plumbing.NewHash("af2d6a6954d532f8ffb47615169c8fdf9d383a1a"),
+		plumbing.NewHash("1669dce138d9b841a518c64b10914d88f5e488ea"),
+		plumbing.NewHash("a5b8b09e2f8fcb0bb99d3ccb0958157b40890d69"),
+		plumbing.NewHash("b029517f6300c2da0f4b651b8642506cd6aaf45d"),
+		plumbing.NewHash("b8e471f58bcbca63b07bda20e428190409c2db47"),
+	})
 }

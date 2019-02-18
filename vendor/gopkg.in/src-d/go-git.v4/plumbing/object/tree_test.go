@@ -1,15 +1,17 @@
 package object
 
 import (
+	"errors"
 	"io"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/cache"
 	"gopkg.in/src-d/go-git.v4/plumbing/filemode"
 	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 	"gopkg.in/src-d/go-git.v4/storage/filesystem"
 
-	fixtures "github.com/src-d/go-git-fixtures"
 	. "gopkg.in/check.v1"
+	"gopkg.in/src-d/go-git-fixtures.v3"
 )
 
 type TreeSuite struct {
@@ -96,6 +98,12 @@ func (s *TreeSuite) TestFileFailsWithExistingTrees(c *C) {
 	c.Assert(err, Equals, ErrFileNotFound)
 }
 
+func (s *TreeSuite) TestSize(c *C) {
+	size, err := s.Tree.Size("LICENSE")
+	c.Assert(err, IsNil)
+	c.Assert(size, Equals, int64(1072))
+}
+
 func (s *TreeSuite) TestFiles(c *C) {
 	var count int
 	err := s.Tree.Files().ForEach(func(f *File) error {
@@ -111,6 +119,48 @@ func (s *TreeSuite) TestFindEntry(c *C) {
 	e, err := s.Tree.FindEntry("vendor/foo.go")
 	c.Assert(err, IsNil)
 	c.Assert(e.Name, Equals, "foo.go")
+}
+
+func (s *TreeSuite) TestFindEntryNotFound(c *C) {
+	e, err := s.Tree.FindEntry("not-found")
+	c.Assert(e, IsNil)
+	c.Assert(err, Equals, ErrEntryNotFound)
+}
+
+// Overrides returned plumbing.EncodedObject for given hash.
+// Otherwise, delegates to actual storer to get real object
+type fakeStorer struct {
+	storer.EncodedObjectStorer
+	hash plumbing.Hash
+	fake fakeEncodedObject
+}
+
+func (fs fakeStorer) EncodedObject(t plumbing.ObjectType, h plumbing.Hash) (plumbing.EncodedObject, error) {
+	if fs.hash == h {
+		return fs.fake, nil
+	}
+	return fs.EncodedObjectStorer.EncodedObject(t, h)
+}
+
+// Overrides reader of plumbing.EncodedObject to simulate read error
+type fakeEncodedObject struct{ plumbing.EncodedObject }
+
+func (fe fakeEncodedObject) Reader() (io.ReadCloser, error) {
+	return nil, errors.New("Simulate encoded object can't be read")
+}
+
+func (s *TreeSuite) TestDir(c *C) {
+	vendor, err := s.Tree.dir("vendor")
+	c.Assert(err, IsNil)
+
+	t, err := GetTree(s.Tree.s, s.Tree.ID())
+	c.Assert(err, IsNil)
+	o, err := t.s.EncodedObject(plumbing.AnyObject, vendor.ID())
+	c.Assert(err, IsNil)
+
+	t.s = fakeStorer{t.s, vendor.ID(), fakeEncodedObject{o}}
+	_, err = t.dir("vendor")
+	c.Assert(err, NotNil)
 }
 
 // This plumbing.EncodedObject implementation has a reader that only returns 6
@@ -228,8 +278,34 @@ func (s *TreeSuite) TestTreeWalkerNext(c *C) {
 	tree, err := commit.Tree()
 	c.Assert(err, IsNil)
 
-	walker := NewTreeWalker(tree, true)
+	walker := NewTreeWalker(tree, true, nil)
 	for _, e := range treeWalkerExpects {
+		name, entry, err := walker.Next()
+		if err == io.EOF {
+			break
+		}
+
+		c.Assert(err, IsNil)
+		c.Assert(name, Equals, e.Path)
+		c.Assert(entry.Name, Equals, e.Name)
+		c.Assert(entry.Mode, Equals, e.Mode)
+		c.Assert(entry.Hash.String(), Equals, e.Hash)
+
+		c.Assert(walker.Tree().ID().String(), Equals, e.Tree)
+	}
+}
+
+func (s *TreeSuite) TestTreeWalkerNextSkipSeen(c *C) {
+	commit, err := GetCommit(s.Storer, plumbing.NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"))
+	c.Assert(err, IsNil)
+	tree, err := commit.Tree()
+	c.Assert(err, IsNil)
+
+	seen := map[plumbing.Hash]bool{
+		plumbing.NewHash(treeWalkerExpects[0].Hash): true,
+	}
+	walker := NewTreeWalker(tree, true, seen)
+	for _, e := range treeWalkerExpects[1:] {
 		name, entry, err := walker.Next()
 		if err == io.EOF {
 			break
@@ -251,7 +327,7 @@ func (s *TreeSuite) TestTreeWalkerNextNonRecursive(c *C) {
 	c.Assert(err, IsNil)
 
 	var count int
-	walker := NewTreeWalker(tree, false)
+	walker := NewTreeWalker(tree, false, nil)
 	for {
 		name, entry, err := walker.Next()
 		if err == io.EOF {
@@ -272,8 +348,7 @@ func (s *TreeSuite) TestTreeWalkerNextNonRecursive(c *C) {
 
 func (s *TreeSuite) TestTreeWalkerNextSubmodule(c *C) {
 	dotgit := fixtures.ByURL("https://github.com/git-fixtures/submodule.git").One().DotGit()
-	st, err := filesystem.NewStorage(dotgit)
-	c.Assert(err, IsNil)
+	st := filesystem.NewStorage(dotgit, cache.NewObjectLRUDefault())
 
 	hash := plumbing.NewHash("b685400c1f9316f350965a5993d350bc746b0bf4")
 	commit, err := GetCommit(st, hash)
@@ -290,7 +365,7 @@ func (s *TreeSuite) TestTreeWalkerNextSubmodule(c *C) {
 	}
 
 	var count int
-	walker := NewTreeWalker(tree, true)
+	walker := NewTreeWalker(tree, true, nil)
 	defer walker.Close()
 
 	for {

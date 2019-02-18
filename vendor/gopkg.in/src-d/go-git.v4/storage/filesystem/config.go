@@ -1,18 +1,19 @@
 package filesystem
 
 import (
-	"io/ioutil"
+	stdioutil "io/ioutil"
 	"os"
 
 	"gopkg.in/src-d/go-git.v4/config"
-	"gopkg.in/src-d/go-git.v4/storage/filesystem/internal/dotgit"
+	"gopkg.in/src-d/go-git.v4/storage/filesystem/dotgit"
+	"gopkg.in/src-d/go-git.v4/utils/ioutil"
 )
 
 type ConfigStorage struct {
 	dir *dotgit.DotGit
 }
 
-func (c *ConfigStorage) Config() (*config.Config, error) {
+func (c *ConfigStorage) Config() (conf *config.Config, err error) {
 	cfg := config.NewConfig()
 
 	f, err := c.dir.Config()
@@ -24,22 +25,22 @@ func (c *ConfigStorage) Config() (*config.Config, error) {
 		return nil, err
 	}
 
-	defer f.Close()
+	defer ioutil.CheckClose(f, &err)
 
-	b, err := ioutil.ReadAll(f)
+	b, err := stdioutil.ReadAll(f)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := cfg.Unmarshal(b); err != nil {
+	if err = cfg.Unmarshal(b); err != nil {
 		return nil, err
 	}
 
-	return cfg, nil
+	return cfg, err
 }
 
-func (c *ConfigStorage) SetConfig(cfg *config.Config) error {
-	if err := cfg.Validate(); err != nil {
+func (c *ConfigStorage) SetConfig(cfg *config.Config) (err error) {
+	if err = cfg.Validate(); err != nil {
 		return err
 	}
 
@@ -48,7 +49,7 @@ func (c *ConfigStorage) SetConfig(cfg *config.Config) error {
 		return err
 	}
 
-	defer f.Close()
+	defer ioutil.CheckClose(f, &err)
 
 	b, err := cfg.Marshal()
 	if err != nil {

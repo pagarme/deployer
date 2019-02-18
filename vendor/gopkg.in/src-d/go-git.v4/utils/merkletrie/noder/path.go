@@ -6,7 +6,7 @@ import (
 )
 
 // Path values represent a noder and its ancestors.  The root goes first
-// and the actual final noder the path is refering to will be the last.
+// and the actual final noder the path is referring to will be the last.
 //
 // A path implements the Noder interface, redirecting all the interface
 // calls to its final noder.
@@ -78,6 +78,8 @@ func (p Path) Compare(other Path) int {
 		case i == len(p):
 			return -1
 		default:
+			// We do *not* normalize Unicode here. CGit doesn't.
+			// https://github.com/src-d/go-git/issues/1057
 			cmp := strings.Compare(p[i].Name(), other[i].Name())
 			if cmp != 0 {
 				return cmp

@@ -54,22 +54,47 @@ func (s *ReferenceSuite) TestNewHashReference(c *C) {
 	c.Assert(r.Hash(), Equals, NewHash("6ecf0ef2c2dffb796033e5a02219af86ec6584e5"))
 }
 
+func (s *ReferenceSuite) TestNewBranchReferenceName(c *C) {
+	r := NewBranchReferenceName("foo")
+	c.Assert(r.String(), Equals, "refs/heads/foo")
+}
+
+func (s *ReferenceSuite) TestNewNoteReferenceName(c *C) {
+	r := NewNoteReferenceName("foo")
+	c.Assert(r.String(), Equals, "refs/notes/foo")
+}
+
+func (s *ReferenceSuite) TestNewRemoteReferenceName(c *C) {
+	r := NewRemoteReferenceName("bar", "foo")
+	c.Assert(r.String(), Equals, "refs/remotes/bar/foo")
+}
+
+func (s *ReferenceSuite) TestNewRemoteHEADReferenceName(c *C) {
+	r := NewRemoteHEADReferenceName("foo")
+	c.Assert(r.String(), Equals, "refs/remotes/foo/HEAD")
+}
+
+func (s *ReferenceSuite) TestNewTagReferenceName(c *C) {
+	r := NewTagReferenceName("foo")
+	c.Assert(r.String(), Equals, "refs/tags/foo")
+}
+
 func (s *ReferenceSuite) TestIsBranch(c *C) {
-	r := NewHashReference(ExampleReferenceName, ZeroHash)
+	r := ExampleReferenceName
 	c.Assert(r.IsBranch(), Equals, true)
 }
 
 func (s *ReferenceSuite) TestIsNote(c *C) {
-	r := NewHashReference(ReferenceName("refs/notes/foo"), ZeroHash)
+	r := ReferenceName("refs/notes/foo")
 	c.Assert(r.IsNote(), Equals, true)
 }
 
 func (s *ReferenceSuite) TestIsRemote(c *C) {
-	r := NewHashReference(ReferenceName("refs/remotes/origin/master"), ZeroHash)
+	r := ReferenceName("refs/remotes/origin/master")
 	c.Assert(r.IsRemote(), Equals, true)
 }
 
 func (s *ReferenceSuite) TestIsTag(c *C) {
-	r := NewHashReference(ReferenceName("refs/tags/v3.1."), ZeroHash)
+	r := ReferenceName("refs/tags/v3.1.")
 	c.Assert(r.IsTag(), Equals, true)
 }
