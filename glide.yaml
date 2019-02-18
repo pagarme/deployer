@@ -1,7 +1,6 @@
 package: github.com/pagarme/deployer
 import:
 - package: github.com/mitchellh/cli
-- package: srcd.works/go-git.v4
 - package: gopkg.in/yaml.v2
 - package: gopkg.in/src-d/go-git.v4
   version: master

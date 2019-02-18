@@ -1,5 +1,5 @@
-hash: 96d10dff585d4676b601018fe62999551de109d94c71d5aac8bc15dd2c03b4a6
-updated: 2017-07-12T15:18:30.14055394-03:00
+hash: d10157da40b3f391466619249a617c77841705f25632f529823bf59c499ea0bb
+updated: 2019-02-18T13:47:01.046604+01:00
 imports:
 - name: github.com/armon/go-metrics
   version: f036747b9d0e8590f175a5d654a2194a7d9df4b5
@@ -192,7 +192,7 @@ imports:
   - plumbing/transport/ssh
   - storage
   - storage/filesystem
-  - storage/filesystem/internal/dotgit
+  - storage/filesystem/dotgit
   - storage/memory
   - utils/binary
   - utils/diff
@@ -206,6 +206,4 @@ imports:
   version: 8a331561fe74dadba6edfc59f3be66c22c3b065d
 - name: gopkg.in/yaml.v2
   version: 1be3d31502d6eabc0dd7ce5b0daab022e14a5538
-- name: srcd.works/go-git.v4
-  version: ad02bf020460c210660db4fffda7f926b6aae95a
 testImports: []
