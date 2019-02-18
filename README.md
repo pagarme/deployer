@@ -48,6 +48,11 @@ environments:
 
 **Note:** The order the steps appear in the configuration file, does not determine the order they will be executed. Check [Steps](#steps) for more information.
 
+Also in order to send the logs to DynamoDB, the following environment 
+variables must be set:
+  - `DEPLOYER_DYNAMODB_TABLE`: DynamoDB's log table
+  - `DEPLOYER_AWS_REGION`: AWS region 
+
 ## Steps
 
 The `deployer` deploys application executing different steps, one after the other. The order the steps are executed is: `scm -> build -> deploy`
