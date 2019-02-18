@@ -3,13 +3,18 @@ package command
 import (
 	"flag"
 	"fmt"
+	"os/user"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/pagarme/deployer/build"
 	"github.com/pagarme/deployer/config"
 	"github.com/pagarme/deployer/deploy"
+	"github.com/pagarme/deployer/logger"
 	"github.com/pagarme/deployer/pipeline"
 	"github.com/pagarme/deployer/scm"
+	uuid "github.com/satori/go.uuid"
 )
 
 type DeployCommand struct {
@@ -36,6 +41,24 @@ func (c *DeployCommand) Synopsis() string {
 }
 
 func (c *DeployCommand) Run(args []string) int {
+	log := &logger.DynamoLogger{}
+	log.Init()
+
+	executionID := uuid.NewV4().String()
+	curUser, _ := user.Current()
+
+	commandLog := &logger.CommandLog{
+		Username:     curUser.Username,
+		Timestamp:    strconv.FormatInt(time.Now().UTC().UnixNano(), 10),
+		Command:      "deploy",
+		Args:         args,
+		Status:       "started",
+		StatusReason: "none",
+		ExecutionID:  executionID,
+	}
+
+	log.LogCommand(*commandLog)
+
 	env := ""
 	ref := "master"
 
@@ -110,8 +133,17 @@ func (c *DeployCommand) Run(args []string) int {
 
 	if err := pipe.Execute(); err != nil {
 		fmt.Printf("An error ocurred during the deployment: %s\n", err)
+		commandLog.Status = "failed"
+		commandLog.StatusReason = err.Error()
+		commandLog.Timestamp = strconv.FormatInt(time.Now().UTC().UnixNano(), 10)
+		log.LogCommand(*commandLog)
+
 		return 1
 	}
+
+	commandLog.Status = "finished"
+	commandLog.Timestamp = strconv.FormatInt(time.Now().UTC().UnixNano(), 10)
+	log.LogCommand(*commandLog)
 
 	return 0
 }
