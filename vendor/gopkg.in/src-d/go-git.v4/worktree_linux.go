@@ -12,7 +12,6 @@ import (
 func init() {
 	fillSystemInfo = func(e *index.Entry, sys interface{}) {
 		if os, ok := sys.(*syscall.Stat_t); ok {
-
 			e.CreatedAt = time.Unix(int64(os.Ctim.Sec), int64(os.Ctim.Nsec))
 			e.Dev = uint32(os.Dev)
 			e.Inode = uint32(os.Ino)
@@ -20,4 +19,8 @@ func init() {
 			e.UID = os.Uid
 		}
 	}
+}
+
+func isSymlinkWindowsNonAdmin(err error) bool {
+	return false
 }

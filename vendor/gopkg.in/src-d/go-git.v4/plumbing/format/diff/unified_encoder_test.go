@@ -20,7 +20,7 @@ func (s *UnifiedEncoderTestSuite) TestBothFilesEmpty(c *C) {
 	buffer := bytes.NewBuffer(nil)
 	e := NewUnifiedEncoder(buffer, 1)
 	err := e.Encode(testPatch{filePatches: []testFilePatch{{}}})
-	c.Assert(err, Equals, ErrBothFilesEmpty)
+	c.Assert(err, IsNil)
 }
 
 func (s *UnifiedEncoderTestSuite) TestBinaryFile(c *C) {
@@ -150,6 +150,43 @@ var oneChunkPatchInverted Patch = testPatch{
 }
 
 var fixtures []*fixture = []*fixture{{
+	patch: testPatch{
+		message: "",
+		filePatches: []testFilePatch{{
+			from: &testFile{
+				mode: filemode.Regular,
+				path: "README.md",
+				seed: "hello\nworld\n",
+			},
+			to: &testFile{
+				mode: filemode.Regular,
+				path: "README.md",
+				seed: "hello\nbug\n",
+			},
+			chunks: []testChunk{{
+				content: "hello",
+				op:      Equal,
+			}, {
+				content: "world",
+				op:      Delete,
+			}, {
+				content: "bug",
+				op:      Add,
+			}},
+		}},
+	},
+	desc:    "positive negative number",
+	context: 2,
+	diff: `diff --git a/README.md b/README.md
+index 94954abda49de8615a048f8d2e64b5de848e27a1..f3dad9514629b9ff9136283ae331ad1fc95748a8 100644
+--- a/README.md
++++ b/README.md
+@@ -1,2 +1,2 @@
+ hello
+-world
++bug
+`,
+}, {
 	patch: testPatch{
 		message: "",
 		filePatches: []testFilePatch{{
@@ -474,6 +511,43 @@ index ab5eed5d4a2c33aeef67e0188ee79bed666bde6f..0adddcde4fd38042c354518351820eb0
 -U
  V
  W
+`,
+}, {
+	patch:   oneChunkPatch,
+	desc:    "modified deleting lines file with context to 6",
+	context: 6,
+	diff: `diff --git a/onechunk.txt b/onechunk.txt
+index ab5eed5d4a2c33aeef67e0188ee79bed666bde6f..0adddcde4fd38042c354518351820eb06c417c82 100644
+--- a/onechunk.txt
++++ b/onechunk.txt
+@@ -1,27 +1,23 @@
+-A
+ B
+ C
+ D
+ E
+ F
+ G
+-H
+ I
+ J
+ K
+ L
+ M
+ N
+-Ñ
+ O
+ P
+ Q
+ R
+ S
+ T
+-U
+ V
+ W
+ X
+ Y
+ Z
 `,
 }, {
 	patch: oneChunkPatch,

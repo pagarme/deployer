@@ -1,16 +1,19 @@
 package git
 
 import (
-	"path/filepath"
+	"bytes"
+	"path"
+	"sort"
 	"strings"
 
+	"golang.org/x/crypto/openpgp"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/filemode"
 	"gopkg.in/src-d/go-git.v4/plumbing/format/index"
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 	"gopkg.in/src-d/go-git.v4/storage"
 
-	"gopkg.in/src-d/go-billy.v3"
+	"gopkg.in/src-d/go-billy.v4"
 )
 
 // Commit stores the current contents of the index in a new commit along with
@@ -32,7 +35,7 @@ func (w *Worktree) Commit(msg string, opts *CommitOptions) (plumbing.Hash, error
 	}
 
 	h := &buildTreeHelper{
-		fs: w.fs,
+		fs: w.Filesystem,
 		s:  w.r.Storer,
 	}
 
@@ -63,7 +66,6 @@ func (w *Worktree) autoAddModifiedAndDeleted() error {
 		if _, err := w.Add(path); err != nil {
 			return err
 		}
-
 	}
 
 	return nil
@@ -93,11 +95,35 @@ func (w *Worktree) buildCommitObject(msg string, opts *CommitOptions, tree plumb
 		ParentHashes: opts.Parents,
 	}
 
+	if opts.SignKey != nil {
+		sig, err := w.buildCommitSignature(commit, opts.SignKey)
+		if err != nil {
+			return plumbing.ZeroHash, err
+		}
+		commit.PGPSignature = sig
+	}
+
 	obj := w.r.Storer.NewEncodedObject()
 	if err := commit.Encode(obj); err != nil {
 		return plumbing.ZeroHash, err
 	}
 	return w.r.Storer.SetEncodedObject(obj)
+}
+
+func (w *Worktree) buildCommitSignature(commit *object.Commit, signKey *openpgp.Entity) (string, error) {
+	encoded := &plumbing.MemoryObject{}
+	if err := commit.Encode(encoded); err != nil {
+		return "", err
+	}
+	r, err := encoded.Reader()
+	if err != nil {
+		return "", err
+	}
+	var b bytes.Buffer
+	if err := openpgp.ArmoredDetachSign(&b, signKey, r, nil); err != nil {
+		return "", err
+	}
+	return b.String(), nil
 }
 
 // buildTreeHelper converts a given index.Index file into multiple git objects
@@ -128,48 +154,61 @@ func (h *buildTreeHelper) BuildTree(idx *index.Index) (plumbing.Hash, error) {
 }
 
 func (h *buildTreeHelper) commitIndexEntry(e *index.Entry) error {
-	parts := strings.Split(e.Name, string(filepath.Separator))
+	parts := strings.Split(e.Name, "/")
 
-	var path string
+	var fullpath string
 	for _, part := range parts {
-		parent := path
-		path = filepath.Join(path, part)
+		parent := fullpath
+		fullpath = path.Join(fullpath, part)
 
-		h.doBuildTree(e, parent, path)
+		h.doBuildTree(e, parent, fullpath)
 	}
 
 	return nil
 }
 
-func (h *buildTreeHelper) doBuildTree(e *index.Entry, parent, path string) {
-	if _, ok := h.trees[path]; ok {
+func (h *buildTreeHelper) doBuildTree(e *index.Entry, parent, fullpath string) {
+	if _, ok := h.trees[fullpath]; ok {
 		return
 	}
 
-	if _, ok := h.entries[path]; ok {
+	if _, ok := h.entries[fullpath]; ok {
 		return
 	}
 
-	te := object.TreeEntry{Name: filepath.Base(path)}
+	te := object.TreeEntry{Name: path.Base(fullpath)}
 
-	if path == e.Name {
+	if fullpath == e.Name {
 		te.Mode = e.Mode
 		te.Hash = e.Hash
 	} else {
 		te.Mode = filemode.Dir
-		h.trees[path] = &object.Tree{}
+		h.trees[fullpath] = &object.Tree{}
 	}
 
 	h.trees[parent].Entries = append(h.trees[parent].Entries, te)
 }
 
+type sortableEntries []object.TreeEntry
+
+func (sortableEntries) sortName(te object.TreeEntry) string {
+	if te.Mode == filemode.Dir {
+		return te.Name + "/"
+	}
+	return te.Name
+}
+func (se sortableEntries) Len() int               { return len(se) }
+func (se sortableEntries) Less(i int, j int) bool { return se.sortName(se[i]) < se.sortName(se[j]) }
+func (se sortableEntries) Swap(i int, j int)      { se[i], se[j] = se[j], se[i] }
+
 func (h *buildTreeHelper) copyTreeToStorageRecursive(parent string, t *object.Tree) (plumbing.Hash, error) {
+	sort.Sort(sortableEntries(t.Entries))
 	for i, e := range t.Entries {
 		if e.Mode != filemode.Dir && !e.Hash.IsZero() {
 			continue
 		}
 
-		path := filepath.Join(parent, e.Name)
+		path := path.Join(parent, e.Name)
 
 		var err error
 		e.Hash, err = h.copyTreeToStorageRecursive(path, h.trees[path])

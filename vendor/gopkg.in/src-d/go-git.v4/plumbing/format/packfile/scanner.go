@@ -8,10 +8,12 @@ import (
 	"hash"
 	"hash/crc32"
 	"io"
-	"io/ioutil"
+	stdioutil "io/ioutil"
+	"sync"
 
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/utils/binary"
+	"gopkg.in/src-d/go-git.v4/utils/ioutil"
 )
 
 var (
@@ -61,10 +63,7 @@ func NewScanner(r io.Reader) *Scanner {
 
 	crc := crc32.NewIEEE()
 	return &Scanner{
-		r: &teeReader{
-			newByteReadSeeker(seeker),
-			crc,
-		},
+		r:          newTeeReader(newByteReadSeeker(seeker), crc),
 		crc:        crc,
 		IsSeekable: ok,
 	}
@@ -139,11 +138,51 @@ func (s *Scanner) readCount() (uint32, error) {
 	return binary.ReadUint32(s.r)
 }
 
+// SeekObjectHeader seeks to specified offset and returns the ObjectHeader
+// for the next object in the reader
+func (s *Scanner) SeekObjectHeader(offset int64) (*ObjectHeader, error) {
+	// if seeking we assume that you are not interested in the header
+	if s.version == 0 {
+		s.version = VersionSupported
+	}
+
+	if _, err := s.r.Seek(offset, io.SeekStart); err != nil {
+		return nil, err
+	}
+
+	h, err := s.nextObjectHeader()
+	if err != nil {
+		return nil, err
+	}
+
+	h.Offset = offset
+	return h, nil
+}
+
 // NextObjectHeader returns the ObjectHeader for the next object in the reader
 func (s *Scanner) NextObjectHeader() (*ObjectHeader, error) {
 	if err := s.doPending(); err != nil {
 		return nil, err
 	}
+
+	offset, err := s.r.Seek(0, io.SeekCurrent)
+	if err != nil {
+		return nil, err
+	}
+
+	h, err := s.nextObjectHeader()
+	if err != nil {
+		return nil, err
+	}
+
+	h.Offset = offset
+	return h, nil
+}
+
+// nextObjectHeader returns the ObjectHeader for the next object in the reader
+// without the Offset field
+func (s *Scanner) nextObjectHeader() (*ObjectHeader, error) {
+	defer s.Flush()
 
 	s.crc.Reset()
 
@@ -198,7 +237,7 @@ func (s *Scanner) discardObjectIfNeeded() error {
 	}
 
 	h := s.pendingObject
-	n, _, err := s.NextObject(ioutil.Discard)
+	n, _, err := s.NextObject(stdioutil.Discard)
 	if err != nil {
 		return err
 	}
@@ -269,41 +308,45 @@ func (s *Scanner) NextObject(w io.Writer) (written int64, crc32 uint32, err erro
 
 	s.pendingObject = nil
 	written, err = s.copyObject(w)
+	s.Flush()
 	crc32 = s.crc.Sum32()
 	return
 }
 
 // ReadRegularObject reads and write a non-deltified object
 // from it zlib stream in an object entry in the packfile.
-func (s *Scanner) copyObject(w io.Writer) (int64, error) {
-	var err error
+func (s *Scanner) copyObject(w io.Writer) (n int64, err error) {
 	if s.zr == nil {
-		zr, err := zlib.NewReader(s.r)
+		var zr io.ReadCloser
+		zr, err = zlib.NewReader(s.r)
 		if err != nil {
 			return 0, fmt.Errorf("zlib initialization error: %s", err)
 		}
 
 		s.zr = zr.(readerResetter)
 	} else {
-		if err := s.zr.Reset(s.r, nil); err != nil {
+		if err = s.zr.Reset(s.r, nil); err != nil {
 			return 0, fmt.Errorf("zlib reset error: %s", err)
 		}
 	}
 
-	defer func() {
-		closeErr := s.zr.Close()
-		if err == nil {
-			err = closeErr
-		}
-	}()
+	defer ioutil.CheckClose(s.zr, &err)
+	buf := byteSlicePool.Get().([]byte)
+	n, err = io.CopyBuffer(w, s.zr, buf)
+	byteSlicePool.Put(buf)
+	return
+}
 
-	return io.Copy(w, s.zr)
+var byteSlicePool = sync.Pool{
+	New: func() interface{} {
+		return make([]byte, 32*1024)
+	},
 }
 
 // SeekFromStart sets a new offset from start, returns the old position before
 // the change.
 func (s *Scanner) SeekFromStart(offset int64) (previous int64, err error) {
-	// if seeking we assume that you are not interested on the header
+	// if seeking we assume that you are not interested in the header
 	if s.version == 0 {
 		s.version = VersionSupported
 	}
@@ -329,8 +372,20 @@ func (s *Scanner) Checksum() (plumbing.Hash, error) {
 
 // Close reads the reader until io.EOF
 func (s *Scanner) Close() error {
-	_, err := io.Copy(ioutil.Discard, s.r)
+	buf := byteSlicePool.Get().([]byte)
+	_, err := io.CopyBuffer(stdioutil.Discard, s.r, buf)
+	byteSlicePool.Put(buf)
 	return err
+}
+
+// Flush finishes writing the buffer to crc hasher in case we are using
+// a teeReader. Otherwise it is a no-op.
+func (s *Scanner) Flush() error {
+	tee, ok := s.r.(*teeReader)
+	if ok {
+		return tee.Flush()
+	}
+	return nil
 }
 
 type trackableReader struct {
@@ -368,7 +423,7 @@ type bufferedSeeker struct {
 }
 
 func (r *bufferedSeeker) Seek(offset int64, whence int) (int64, error) {
-	if whence == io.SeekCurrent {
+	if whence == io.SeekCurrent && offset == 0 {
 		current, err := r.r.Seek(offset, whence)
 		if err != nil {
 			return current, err
@@ -394,10 +449,21 @@ type reader interface {
 
 type teeReader struct {
 	reader
-	w hash.Hash32
+	w         hash.Hash32
+	bufWriter *bufio.Writer
+}
+
+func newTeeReader(r reader, h hash.Hash32) *teeReader {
+	return &teeReader{
+		reader:    r,
+		w:         h,
+		bufWriter: bufio.NewWriter(h),
+	}
 }
 
 func (r *teeReader) Read(p []byte) (n int, err error) {
+	r.Flush()
+
 	n, err = r.reader.Read(p)
 	if n > 0 {
 		if n, err := r.w.Write(p[:n]); err != nil {
@@ -410,11 +476,12 @@ func (r *teeReader) Read(p []byte) (n int, err error) {
 func (r *teeReader) ReadByte() (b byte, err error) {
 	b, err = r.reader.ReadByte()
 	if err == nil {
-		_, err := r.w.Write([]byte{b})
-		if err != nil {
-			return 0, err
-		}
+		return b, r.bufWriter.WriteByte(b)
 	}
 
 	return
+}
+
+func (r *teeReader) Flush() (err error) {
+	return r.bufWriter.Flush()
 }

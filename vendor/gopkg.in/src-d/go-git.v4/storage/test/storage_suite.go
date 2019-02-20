@@ -14,6 +14,7 @@ import (
 	"gopkg.in/src-d/go-git.v4/storage"
 
 	. "gopkg.in/check.v1"
+	"gopkg.in/src-d/go-git-fixtures.v3"
 )
 
 type Storer interface {
@@ -62,6 +63,14 @@ func NewBaseStorageSuite(s Storer) BaseStorageSuite {
 			plumbing.BlobObject:   {blob, "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391", plumbing.BlobObject},
 			plumbing.TagObject:    {tag, "d994c6bb648123a17e8f70a966857c546b2a6f94", plumbing.TagObject},
 		}}
+}
+
+func (s *BaseStorageSuite) SetUpTest(c *C) {
+	c.Assert(fixtures.Init(), IsNil)
+}
+
+func (s *BaseStorageSuite) TearDownTest(c *C) {
+	c.Assert(fixtures.Clean(), IsNil)
 }
 
 func (s *BaseStorageSuite) TestSetEncodedObjectAndEncodedObject(c *C) {
@@ -141,6 +150,33 @@ func (s *BaseStorageSuite) TestIterEncodedObjects(c *C) {
 		}
 		c.Assert(found, Equals, true, Commentf("Object of type %s not found", to.Type.String()))
 	}
+}
+
+func (s *BaseStorageSuite) TestPackfileWriter(c *C) {
+	pwr, ok := s.Storer.(storer.PackfileWriter)
+	if !ok {
+		c.Skip("not a storer.PackWriter")
+	}
+
+	pw, err := pwr.PackfileWriter()
+	c.Assert(err, IsNil)
+
+	f := fixtures.Basic().One()
+	_, err = io.Copy(pw, f.Packfile())
+	c.Assert(err, IsNil)
+
+	err = pw.Close()
+	c.Assert(err, IsNil)
+
+	iter, err := s.Storer.IterEncodedObjects(plumbing.AnyObject)
+	c.Assert(err, IsNil)
+	objects := 0
+	err = iter.ForEach(func(plumbing.EncodedObject) error {
+		objects++
+		return nil
+	})
+	c.Assert(err, IsNil)
+	c.Assert(objects, Equals, 31)
 }
 
 func (s *BaseStorageSuite) TestObjectStorerTxSetEncodedObjectAndCommit(c *C) {
@@ -244,6 +280,57 @@ func (s *BaseStorageSuite) TestSetReferenceAndGetReference(c *C) {
 	c.Assert(e.Hash().String(), Equals, "bc9968d75e48de59f0870ffb71f5e160bbbdcf52")
 }
 
+func (s *BaseStorageSuite) TestCheckAndSetReference(c *C) {
+	err := s.Storer.SetReference(
+		plumbing.NewReferenceFromStrings("foo", "482e0eada5de4039e6f216b45b3c9b683b83bfa"),
+	)
+	c.Assert(err, IsNil)
+
+	err = s.Storer.CheckAndSetReference(
+		plumbing.NewReferenceFromStrings("foo", "bc9968d75e48de59f0870ffb71f5e160bbbdcf52"),
+		plumbing.NewReferenceFromStrings("foo", "482e0eada5de4039e6f216b45b3c9b683b83bfa"),
+	)
+	c.Assert(err, IsNil)
+
+	e, err := s.Storer.Reference(plumbing.ReferenceName("foo"))
+	c.Assert(err, IsNil)
+	c.Assert(e.Hash().String(), Equals, "bc9968d75e48de59f0870ffb71f5e160bbbdcf52")
+}
+
+func (s *BaseStorageSuite) TestCheckAndSetReferenceNil(c *C) {
+	err := s.Storer.SetReference(
+		plumbing.NewReferenceFromStrings("foo", "482e0eada5de4039e6f216b45b3c9b683b83bfa"),
+	)
+	c.Assert(err, IsNil)
+
+	err = s.Storer.CheckAndSetReference(
+		plumbing.NewReferenceFromStrings("foo", "bc9968d75e48de59f0870ffb71f5e160bbbdcf52"),
+		nil,
+	)
+	c.Assert(err, IsNil)
+
+	e, err := s.Storer.Reference(plumbing.ReferenceName("foo"))
+	c.Assert(err, IsNil)
+	c.Assert(e.Hash().String(), Equals, "bc9968d75e48de59f0870ffb71f5e160bbbdcf52")
+}
+
+func (s *BaseStorageSuite) TestCheckAndSetReferenceError(c *C) {
+	err := s.Storer.SetReference(
+		plumbing.NewReferenceFromStrings("foo", "c3f4688a08fd86f1bf8e055724c84b7a40a09733"),
+	)
+	c.Assert(err, IsNil)
+
+	err = s.Storer.CheckAndSetReference(
+		plumbing.NewReferenceFromStrings("foo", "bc9968d75e48de59f0870ffb71f5e160bbbdcf52"),
+		plumbing.NewReferenceFromStrings("foo", "482e0eada5de4039e6f216b45b3c9b683b83bfa"),
+	)
+	c.Assert(err, Equals, storage.ErrReferenceHasChanged)
+
+	e, err := s.Storer.Reference(plumbing.ReferenceName("foo"))
+	c.Assert(err, IsNil)
+	c.Assert(e.Hash().String(), Equals, "c3f4688a08fd86f1bf8e055724c84b7a40a09733")
+}
+
 func (s *BaseStorageSuite) TestRemoveReference(c *C) {
 	err := s.Storer.SetReference(
 		plumbing.NewReferenceFromStrings("foo", "bc9968d75e48de59f0870ffb71f5e160bbbdcf52"),
@@ -315,7 +402,7 @@ func (s *BaseStorageSuite) TestSetConfigAndConfig(c *C) {
 	expected.Core.IsBare = true
 	expected.Remotes["foo"] = &config.RemoteConfig{
 		Name: "foo",
-		URL:  "http://foo/bar.git",
+		URLs: []string{"http://foo/bar.git"},
 	}
 
 	err := s.Storer.SetConfig(expected)
@@ -365,6 +452,40 @@ func (s *BaseStorageSuite) TestModule(c *C) {
 	storer, err = s.Storer.Module("foo")
 	c.Assert(err, IsNil)
 	c.Assert(storer, NotNil)
+}
+
+func (s *BaseStorageSuite) TestDeltaObjectStorer(c *C) {
+	dos, ok := s.Storer.(storer.DeltaObjectStorer)
+	if !ok {
+		c.Skip("not an DeltaObjectStorer")
+	}
+
+	pwr, ok := s.Storer.(storer.PackfileWriter)
+	if !ok {
+		c.Skip("not a storer.PackWriter")
+	}
+
+	pw, err := pwr.PackfileWriter()
+	c.Assert(err, IsNil)
+
+	f := fixtures.Basic().One()
+	_, err = io.Copy(pw, f.Packfile())
+	c.Assert(err, IsNil)
+
+	err = pw.Close()
+	c.Assert(err, IsNil)
+
+	h := plumbing.NewHash("32858aad3c383ed1ff0a0f9bdf231d54a00c9e88")
+	obj, err := dos.DeltaObject(plumbing.AnyObject, h)
+	c.Assert(err, IsNil)
+	c.Assert(obj.Type(), Equals, plumbing.BlobObject)
+
+	h = plumbing.NewHash("aa9b383c260e1d05fbbf6b30a02914555e20c725")
+	obj, err = dos.DeltaObject(plumbing.AnyObject, h)
+	c.Assert(err, IsNil)
+	c.Assert(obj.Type(), Equals, plumbing.OFSDeltaObject)
+	_, ok = obj.(plumbing.DeltaObject)
+	c.Assert(ok, Equals, true)
 }
 
 func objectEquals(a plumbing.EncodedObject, b plumbing.EncodedObject) error {

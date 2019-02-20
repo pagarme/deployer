@@ -83,6 +83,10 @@ func newIter(root noder.Noder, base noder.Path) (*Iter, error) {
 		base: base,
 	}
 
+	if root == nil {
+		return ret, nil
+	}
+
 	frame, err := frame.New(root)
 	if err != nil {
 		return nil, err
@@ -194,7 +198,7 @@ func (iter *Iter) current() (noder.Path, error) {
 }
 
 // removes the current node if any, and all the frames that become empty as a
-// consecuence of this action.
+// consequence of this action.
 func (iter *Iter) drop() {
 	frame, ok := iter.top()
 	if !ok {
