@@ -196,7 +196,8 @@
   name = "github.com/hashicorp/raft"
   packages = ["."]
   pruneopts = "UT"
-  revision = "b3d48f1a4e569bc4d4e456e8930e35b1aa996ea7"
+  revision = ""
+  version = "v1.0.0"
 
 [[projects]]
   digest = "1:fca03ca144692bd759bb00b1d1434a53bf793c14bfc9e4f35cdc6414ad375bbc"
