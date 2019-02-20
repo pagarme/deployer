@@ -5,3 +5,4 @@ install: echo "Do not install go dependencies" > /dev/null 2>&1
 script:
   - go vet
   - test -z "$(go list ./... | grep -v vendor | xargs go fmt)"
+  - go test ./...
