@@ -1,0 +1,49 @@
+module github.com/pagarme/deployer
+
+require (
+	github.com/armon/go-metrics v0.0.0-20170601214432-f036747b9d0e
+	github.com/armon/go-radix v0.0.0-20160115234725-4239b77079c7
+	github.com/aws/aws-sdk-go v1.10.3
+	github.com/bgentry/speakeasy v0.1.0
+	github.com/dsnet/compress v0.0.0-20171208185109-cc9eb1d7ad76
+	github.com/emirpasic/gods v1.9.0
+	github.com/go-ini/ini v1.28.1
+	github.com/gorhill/cronexpr v0.0.0-20161205141322-d520615e531a
+	github.com/hashicorp/consul v0.0.0-20170711231657-9e83a034e3eb
+	github.com/hashicorp/errwrap v0.0.0-20141028054710-7554cd9344ce
+	github.com/hashicorp/go-cleanhttp v0.0.0-20170211013415-3573b8b52aa7
+	github.com/hashicorp/go-msgpack v0.0.0-20150518234257-fa3f63826f7c
+	github.com/hashicorp/go-multierror v0.0.0-20170622060955-83588e72410a
+	github.com/hashicorp/go-rootcerts v0.0.0-20160503143440-6bb64b370b90
+	github.com/hashicorp/go-version v0.0.0-20170202080759-03c5bf6be031
+	github.com/hashicorp/hcl v0.0.0-20170509225359-392dba7d905e
+	github.com/hashicorp/nomad v0.5.6
+	github.com/hashicorp/raft v1.0.0
+	github.com/hashicorp/serf v0.0.0-20170708011918-e39abe475740
+	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99
+	github.com/jmespath/go-jmespath v0.0.0-20160803190731-bd40a432e4c7
+	github.com/kevinburke/ssh_config v0.0.0-20180830205328-81db2a75821e
+	github.com/mattn/go-isatty v0.0.2
+	github.com/mholt/archiver v2.0.0+incompatible
+	github.com/mitchellh/cli v0.0.0-20170523172749-b481eac70eea
+	github.com/mitchellh/copystructure v0.0.0-20170525013902-d23ffcb85de3
+	github.com/mitchellh/go-homedir v1.0.0
+	github.com/mitchellh/hashstructure v0.0.0-20170609045927-2bca23e0e452
+	github.com/mitchellh/mapstructure v0.0.0-20170523030023-d0303fe80992
+	github.com/mitchellh/reflectwalk v0.0.0-20170508173806-8d802ff4ae93
+	github.com/nwaples/rardecode v0.0.0-20170112110516-f22b7ef81a0a
+	github.com/pelletier/go-buffruneio v0.2.0
+	github.com/satori/go.uuid v1.2.0
+	github.com/sergi/go-diff v1.0.0
+	github.com/src-d/gcfg v1.4.0
+	github.com/ugorji/go v0.0.0-20170620104852-5efa3251c7f7
+	github.com/ulikunitz/xz v0.5.4
+	github.com/xanzy/ssh-agent v0.2.0
+	golang.org/x/crypto v0.0.0-20180904163835-0709b304e793
+	golang.org/x/net v0.0.0-20190213061140-3a22650c66bd
+	golang.org/x/sys v0.0.0-20180903190138-2b024373dcd9
+	gopkg.in/src-d/go-billy.v4 v4.3.0
+	gopkg.in/src-d/go-git.v4 v4.10.0
+	gopkg.in/warnings.v0 v0.1.2
+	gopkg.in/yaml.v2 v2.0.0-20170712054546-1be3d31502d6
+)
