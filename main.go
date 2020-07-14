@@ -6,11 +6,7 @@ import (
 
 	"github.com/mitchellh/cli"
 
-	_ "github.com/pagarme/deployer/build/rocker"
-	_ "github.com/pagarme/deployer/deploy/kubernetes"
-	_ "github.com/pagarme/deployer/deploy/lambda"
 	_ "github.com/pagarme/deployer/deploy/nomad"
-	_ "github.com/pagarme/deployer/scm/git"
 )
 
 func main() {

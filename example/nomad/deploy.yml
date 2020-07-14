@@ -1,9 +1,8 @@
 ---
 deploy:
   type: nomad
-  image: pagarme/application:latest
   job_files:
-    - application.nomad
+    - nginx.nomad
 
 environments:
   sandbox:

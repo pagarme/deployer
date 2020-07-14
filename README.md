@@ -3,7 +3,7 @@
 [![Build Status](https://travis-ci.org/pagarme/deployer.svg?branch=master)](https://travis-ci.org/pagarme/deployer)
 [![Go Report Card](https://goreportcard.com/badge/github.com/pagarme/deployer)](https://goreportcard.com/report/github.com/pagarme/deployer)
 
-:pager: A tool for fetching, building, pushing and deploying applications.
+:pager: A tool for deploying applications.
 
 ## Install
 
@@ -20,8 +20,8 @@ Commands:
   deploy    Deploy an application using a configuration file
 
 Options:
-  --ref     Source Code Management hash to be fetched (default: master)
   --env     Environment to be used (default: main)
+  --img     Docker Image to be used
 ```
 
 ## Configuration File
@@ -30,12 +30,6 @@ To deploy an application you must specify a yml configuration file (e.g. `deploy
 A typical configuration file has the following structure:
 
 ```yml
-scm:
-  type: <type>
-
-build:
-  type: <type>
-
 deploy:
   type: <type>
 
@@ -53,113 +47,102 @@ variables must be set:
   - `DEPLOYER_DYNAMODB_TABLE`: DynamoDB's log table
   - `DEPLOYER_AWS_REGION`: AWS region 
 
-## Steps
-
-The `deployer` deploys application executing different steps, one after the other. The order the steps are executed is: `scm -> build -> deploy`
-
-## SCM (Source Code Management)
-
-Available types are: `git`.
-
-### Git
-
-The Git SCM Step clones a git repository with an specified hash and adds it to a temporary folder.
-
-**Options:**
-
-| Options | Description |
-| --- | --- |
-| `repository` | The git repository to be cloned |
-| `ref` | The ref of the repository to be used. Can be a branch or the sha of a commit. Defaults to `master` or the ref passed via flag `--ref` |
-
-**Example:**
-
-```yml
-scm:
-  type: git
-  repository: https://github.com/pagarme/deployer
-  ref: master
-```
-
-## Build
-
-Available types are: `rocker`.
-
-### Rocker
-
-The Rocker Build step builds and pushes a specified Rockerfile. The following variables are injected when building the Rockerfile:
-
-  1. `RepositoryPath`: The location of the cloned repository from the SCM step
-  2. `ImageSHA`: The sha of the ref from the SCM step
-  3. `ImageRepository`: The repository where the Rocker image will be pushed
-
-For more information about Rocker, check the official documentation (https://github.com/grammarly/rocker)
-
-**Options:**
-
-| Options | Description |
-| --- | --- |
-| `build_directory` | The location of the Rockerfile. Defaults to current directory |
-| `image_repository` | The repository where the Rocker image will be pushed |
-
-**Example:**
-
-```yml
-build:
-  type: rocker
-  build_directory: path/to
-  image_repository: xxxxxx.dkr.ecr.us-east-1.amazonaws.com/deployer # Pushing the image to an AWS ECR
-```
-
 ## Deploy
 
-Available types are: `lambda` and `nomad`.
+Only `nomad`, example file:
 
-### Lambda
-
-The Lambda Deploy step updates and deploys existing AWS Lambda functions. It creates a zip file, uploads it to a S3 Bucket and updates the Lambda functions code.
-
-**Note:** This step does not create the AWS Lambda functions, but instead updates existing functions code.
-
-**Options:**
-
-| Options | Description |
-| --- | --- |
-| `region` | The AWS region the functions are deployed. |
-| `s3_bucket` | The name of the AWS S3 Bucket that will be used to upload the functions zipped source code |
-| `package` | The source code of the functions. A list of folders and files to include in the zip. |
-
-**Environment:**
-
-| Options | Description |
-| --- | --- |
-| `name` | The name of the environment. This will be used to compose the S3 key object. |
-| `functions` | A list of the AWS Lambda functions that will be updated |
-
-**Example:**
+### deploy.yml
 
 ```yml
+---
 deploy:
-  type: lambda
-  region: us-east-1
-  s3_bucket: pagarme-deploy-s3-bucket
-  package: # This will create a zip containing the `dist` and the `node_modules` folders
-    - dist
-    - node_modules
+  type: nomad
+  job_files:
+    - application.nomad
 
-environment:
+environments:
+  sandbox:
+    name: sandbox
   live:
     name: live
-    functions:
-      - hello
-      - cowsay
 ```
+### application.nomad
 
-##
-<hr>
-<p align="center">
-    <a href="https://github.com/pagarme" style="text-decoration:none; margin-right:2rem;">
-    <img src="https://s3.amazonaws.com/pagarme-static-files/media/pagarme-logo.png" width="110px" height="110px" />
-  </a>
-</p>
+```json
+job "application-{{ .Environment.name }}" {
+  type        = "system"
+  region      = "global"
+  datacenters = ["dc1"]
 
+  constraint {
+    attribute = "${node.class}"
+    value     = "application-{{ .Environment.name }}"
+  }
+
+  update {
+    stagger      = "5s"
+    max_parallel = 1
+  }
+
+  group "web" {
+    task "nginx" {
+      driver = "docker"
+
+      config {
+        image      = "{{ .Image }}"
+        force_pull = true
+
+        port_map {
+          "http" = 80
+        }
+
+        dns_servers = ["${attr.unique.network.ip-address}"]
+      }
+
+      env {
+        CONFIG_VERSION = "v1"
+        CONSUL_ADDR    = "${attr.unique.network.ip-address}:8500"
+      }
+
+      service {
+        name = "application-{{ .Environment.name }}"
+
+        tags = ["application"]
+
+        port = "http"
+
+        check {
+          name     = "http check"
+          type     = "http"
+          port     = "http"
+          path     = "/_health_check"
+          interval = "5s"
+          timeout  = "2s"
+        }
+
+        check {
+          name = "Status Information Health Check"
+          type = "http"
+          port = "http"
+          path = "/_status"
+          interval = "5s"
+          timeout = "2s"
+        }
+      }
+
+      resources {
+        cpu    = "2400"
+        memory = "3584"
+
+        network {
+          mbits = 100
+
+          port "http" {
+            static = 80
+          }
+        }
+      }
+    }
+  }
+}
+```

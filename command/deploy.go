@@ -8,12 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pagarme/deployer/build"
 	"github.com/pagarme/deployer/config"
 	"github.com/pagarme/deployer/deploy"
 	"github.com/pagarme/deployer/logger"
 	"github.com/pagarme/deployer/pipeline"
-	"github.com/pagarme/deployer/scm"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -29,8 +27,8 @@ Available Commands:
   deploy    Deploy an application using a configuration file
 
 Options:
-  --ref     Source Code Management hash to be fetched (default: master)
   --env     Environment to be used (default: main)
+  --img     Docker Image to be used
 `
 
 	return strings.TrimSpace(helpText)
@@ -60,11 +58,11 @@ func (c *DeployCommand) Run(args []string) int {
 	log.LogCommand(*commandLog)
 
 	env := ""
-	ref := "master"
+	img := ""
 
 	flags := flag.NewFlagSet("deployer deploy", flag.ContinueOnError)
 	flags.StringVar(&env, "env", "main", "Deployment environment")
-	flags.StringVar(&ref, "ref", "master", "Scm reference to deploy")
+	flags.StringVar(&img, "img", "main", "Docker image")
 
 	if err := flags.Parse(args); err != nil {
 		fmt.Println(c.Help())
@@ -88,22 +86,16 @@ func (c *DeployCommand) Run(args []string) int {
 
 	pipe.Context["Config"] = cfg
 	pipe.Context["Environment"] = cfg.GetEnvironment(env)
+	pipe.Context["Image"] = img
 
 	if len(cfg.Pipeline) == 0 {
-		pipe.Add(&scm.ScmStep{
-			Config: cfg.Scm,
-			Ref:    ref,
-		})
-
-		pipe.Add(&build.BuildStep{Config: cfg.Build})
-
 		pipe.Add(&deploy.DeployStep{Config: cfg.Deploy})
 	} else {
 		for _, v := range cfg.Pipeline {
 			kind := ""
 
 			for k := range v {
-				if k != "scm" && k != "build" && k != "deploy" {
+				if k != "deploy" {
 					continue
 				}
 
@@ -112,15 +104,6 @@ func (c *DeployCommand) Run(args []string) int {
 			}
 
 			switch kind {
-			case "scm":
-				pipe.Add(&scm.ScmStep{
-					Config: v[kind],
-					Ref:    ref,
-				})
-
-			case "build":
-				pipe.Add(&build.BuildStep{Config: v[kind]})
-
 			case "deploy":
 				pipe.Add(&deploy.DeployStep{Config: v[kind]})
 
