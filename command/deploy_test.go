@@ -17,8 +17,8 @@ Available Commands:
   deploy    Deploy an application using a configuration file
 
 Options:
-  --ref     Source Code Management hash to be fetched (default: master)
   --env     Environment to be used (default: main)
+  --img     Docker Image to be used
 `)
 
 	if result != expectedResult {

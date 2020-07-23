@@ -1,0 +1,13 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/golang:1.14
+
+    working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
+    steps:
+      - checkout
+      - run: go vet
+      - run: test -z "$(go list ./... | grep -v vendor | xargs go fmt)"
+      - run: go test ./...
+      - run: GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -ldflags '-w -extldflags "-static"' .

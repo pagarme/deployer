@@ -2,18 +2,15 @@ package config
 
 import (
 	"fmt"
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
+
+	"gopkg.in/yaml.v2"
 )
 
 type Config struct {
-	Pipeline []map[string]map[string]interface{} `yml:"pipeline"`
-
-	Scm    map[string]interface{} `yml:"scm"`
-	Build  map[string]interface{} `yml:"build"`
-	Deploy map[string]interface{} `yml:"deploy"`
-
-	Environments map[string]interface{} `yml:"environments"`
+	Pipeline     []map[string]map[string]interface{} `yml:"pipeline"`
+	Deploy       map[string]interface{}              `yml:"deploy"`
+	Environments map[string]interface{}              `yml:"environments"`
 }
 
 func ReadConfig(filename string) (*Config, error) {
