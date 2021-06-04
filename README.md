@@ -68,7 +68,7 @@ environments:
 ```
 ### application.nomad
 
-```json
+```hcl
 job "application-{{ .Environment.name }}" {
   type        = "system"
   region      = "global"
