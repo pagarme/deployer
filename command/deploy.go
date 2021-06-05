@@ -39,8 +39,11 @@ func (c *DeployCommand) Synopsis() string {
 }
 
 func (c *DeployCommand) Run(args []string) int {
-	log := &logger.DynamoLogger{}
-	log.Init()
+	log, err := logger.NewDynamoLogger()
+	if err != nil {
+		fmt.Println(err.Error())
+		return 1
+	}
 
 	executionID := uuid.NewV4().String()
 	curUser, _ := user.Current()
