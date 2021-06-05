@@ -16,6 +16,7 @@ import (
 )
 
 type DeployCommand struct {
+	logger logger.Logger
 }
 
 func (c *DeployCommand) Help() string {
@@ -39,12 +40,6 @@ func (c *DeployCommand) Synopsis() string {
 }
 
 func (c *DeployCommand) Run(args []string) int {
-	log, err := logger.NewDynamoLogger()
-	if err != nil {
-		fmt.Println(err.Error())
-		return 1
-	}
-
 	executionID := uuid.NewV4().String()
 	curUser, _ := user.Current()
 
@@ -58,7 +53,7 @@ func (c *DeployCommand) Run(args []string) int {
 		ExecutionID:  executionID,
 	}
 
-	log.LogCommand(*commandLog)
+	c.logger.LogCommand(commandLog)
 
 	env := ""
 	img := ""
@@ -122,14 +117,27 @@ func (c *DeployCommand) Run(args []string) int {
 		commandLog.Status = "failed"
 		commandLog.StatusReason = err.Error()
 		commandLog.Timestamp = strconv.FormatInt(time.Now().UTC().UnixNano(), 10)
-		log.LogCommand(*commandLog)
+		c.logger.LogCommand(commandLog)
 
 		return 1
 	}
 
 	commandLog.Status = "finished"
 	commandLog.Timestamp = strconv.FormatInt(time.Now().UTC().UnixNano(), 10)
-	log.LogCommand(*commandLog)
+	c.logger.LogCommand(commandLog)
 
 	return 0
+}
+
+func NewDeployCommand() (*DeployCommand, error) {
+	log, err := logger.NewDynamoLogger()
+	if err != nil {
+		return nil, err
+	}
+
+	cmd := &DeployCommand{
+		logger: log,
+	}
+
+	return cmd, nil
 }

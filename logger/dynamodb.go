@@ -23,7 +23,7 @@ type DynamoLogger struct {
 	Table *string
 }
 
-func (d *DynamoLogger) LogCommand(command CommandLog) error {
+func (d *DynamoLogger) LogCommand(command *CommandLog) error {
 	av, err := dynamodbattribute.MarshalMap(command)
 	if err != nil {
 		return errors.Wrap(err, ErrorParsingCommands.Error())
