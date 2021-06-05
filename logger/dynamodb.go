@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 )
 
 type DynamoLogger struct {
@@ -37,4 +38,26 @@ func (d *DynamoLogger) Init() {
 
 	d.Svc = dynamodb.New(session)
 	d.Table = aws.String(dynamoTable)
+}
+
+func (d *DynamoLogger) LogCommand(command CommandLog) error {
+	av, err := dynamodbattribute.MarshalMap(command)
+	if err != nil {
+		fmt.Printf("An error occured when parsing command: %s\n", err)
+		os.Exit(1)
+	}
+
+	input := &dynamodb.PutItemInput{
+		Item:      av,
+		TableName: d.Table,
+	}
+
+	_, err = d.Svc.PutItem(input)
+	if err != nil {
+		fmt.Println("Got error calling PutItem:")
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+
+	return nil
 }
