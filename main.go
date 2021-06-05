@@ -10,10 +10,10 @@ import (
 )
 
 func main() {
-	os.Exit(Run(os.Args[1:]))
+	os.Exit(run(os.Args[1:]))
 }
 
-func Run(args []string) int {
+func run(args []string) int {
 	commands := Commands()
 
 	cli := &cli.CLI{
@@ -23,7 +23,6 @@ func Run(args []string) int {
 	}
 
 	exitCode, err := cli.Run()
-
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error executing CLI: %s\n", err.Error())
 		return 1
